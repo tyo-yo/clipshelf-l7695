@@ -1,0 +1,57 @@
+{
+ "tick": {
+  "file": "tick.ogg",
+  "gain": 0.45,
+  "dur": 0.087
+ },
+ "pop": {
+  "file": "pop.ogg",
+  "gain": 0.7,
+  "dur": 0.179
+ },
+ "seat": {
+  "file": "seat.ogg",
+  "gain": 0.85,
+  "dur": 0.176
+ },
+ "scan": {
+  "file": "scan.ogg",
+  "gain": 0.5,
+  "dur": 0.364
+ },
+ "deal": {
+  "file": "deal.ogg",
+  "gain": 0.55,
+  "dur": 0.151
+ },
+ "select": {
+  "file": "select.ogg",
+  "gain": 0.65,
+  "dur": 0.197
+ },
+ "case_in": {
+  "file": "case_in.ogg",
+  "gain": 0.9,
+  "dur": 0.225
+ },
+ "power_on": {
+  "file": "power_on.ogg",
+  "gain": 0.6,
+  "dur": 0.537
+ },
+ "eject": {
+  "file": "eject.ogg",
+  "gain": 0.8,
+  "dur": 0.27
+ },
+ "case_out": {
+  "file": "case_out.ogg",
+  "gain": 0.75,
+  "dur": 0.216
+ },
+ "seek": {
+  "file": "seek.ogg",
+  "gain": 0.4,
+  "dur": 0.141
+ }
+}

@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><title>clipshelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&family=IBM+Plex+Sans+JP:wght@500;700&family=IBM+Plex+Mono:wght@500&family=Klee+One:wght@600&family=Doto:wght@700;900&display=swap" rel="stylesheet">
+<style>
+/* idc · s3 · 物の理屈: クリップ = 記録の入った厚い ID カード、右の帯 = カードの読み取り機（差し込み口と、下に送りの棚）、動画 = 読み取り機につながった画面。帯と画面は同じ1台の装置。
+   動きはすべて上向き: 上へ弾く → 今のカードが差し込み口から抜けて上へ飛び、棚の次のカードが差し込み口に入って顔を出す → 画面が走査線で読み込み、字幕が機械読み取りの記号からほどける */
+:root { --ink: #2d1b27; --ink-2: #383553; --steel: #97b2c1; --bone: #eae7d4; --shade: #1c1019; --copper: #9e7967; --metal: #2a2029; --metal-2: #352a35;
+  --font-num: "Antonio", "Noto Sans CJK JP", sans-serif; --font-mono: "IBM Plex Mono", monospace; --font-jp: "IBM Plex Sans JP", "Noto Sans CJK JP", sans-serif; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overflow-x: clip; background: #070608; }
+body { position: fixed; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; font-family: var(--font-jp); color: var(--bone); }
+#app { position: absolute; left: 0; top: 0; width: 924px; height: 427px; overflow: clip; transform-origin: 0 0; background: var(--shade); }
+#world { position: absolute; inset: 0; }
+/* 画面 */
+#screen { position: absolute; left: 0; top: 0; width: 759px; height: 427px; overflow: clip; background: #000; }
+#vid { position: absolute; inset: 0; width: 759px; height: 427px; object-fit: cover; }
+#scan { position: absolute; inset: 0; width: 759px; height: 427px; pointer-events: none; }
+/* 字幕（下の縁の中だけ）: シーズンの札と、題名の帯 */
+#cap { position: absolute; left: 96px; top: 404px; width: 496px; height: 23px; pointer-events: none; }
+#cap .strip { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,18,21,.9), rgba(8,10,12,.92)); clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); will-change: transform; }
+#cap .ss { position: absolute; left: 12px; top: 3px; height: 17px; padding: 0 6px; background: var(--lcd); border-radius: 2px; box-shadow: inset 0 1px 3px #000; display: flex; align-items: center; gap: 3px; }
+#cap .ss b { font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 12px; color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.65); }
+#cap .ss i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: 9px; color: rgba(191,227,242,.55); }
+#cap .bar { position: absolute; left: 62px; right: 74px; top: 0; height: 23px; overflow: clip; }
+#cap .txt { position: absolute; left: 0; top: 0; line-height: 23px; white-space: nowrap; font-weight: 700; font-size: 12.5px; letter-spacing: .01em; color: #e9ecef; font-feature-settings: 'palt'; text-shadow: 0 0 6px rgba(191,227,242,.25); }
+#cap .txt.mono { font-family: var(--font-mono); font-weight: 500; color: var(--glow); }
+#cap .cur { position: absolute; top: 5px; width: 7px; height: 13px; background: var(--glow); box-shadow: 0 0 6px rgba(191,227,242,.8); opacity: 0; }
+#cap .no { position: absolute; right: 16px; top: 0; line-height: 23px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 11px; color: rgba(191,227,242,.75); text-shadow: 0 0 4px rgba(191,227,242,.5); }
+#cap .no i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: 9px; margin-right: 2px; opacity: .7; }
+#cap .pg { position: absolute; left: 10px; right: 10px; bottom: 0; height: 1.5px; background: rgba(191,227,242,.12); }
+#cap .pg i { position: absolute; inset: 0; background: var(--glow); box-shadow: 0 0 5px rgba(191,227,242,.8); transform-origin: 0 50%; transform: scaleX(0); }
+/* モニター: 角の丸み、縁の影、ごく薄いガラスの映り込み。切り替えの一瞬だけ画素の格子と走査線、ガラスの反射 */
+#screen { border-radius: 9px; }
+#glass { position: absolute; inset: 0; pointer-events: none; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.7), inset 0 0 22px rgba(0,0,0,.42); }
+#mask { position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: multiply;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255,90,90,.9) 0 1px, rgba(90,255,140,.9) 1px 2px, rgba(90,140,255,.9) 2px 3px); }
+#glare { position: absolute; left: -40%; top: -10%; width: 30%; height: 120%; pointer-events: none; opacity: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.16) 45%, rgba(191,227,242,.10) 55%, transparent); transform: skewX(-18deg); }
+/* 読み取り機（帯）: 灰色がかった金属の機械。カード（紫の積層）と材質を分ける */
+#turn { display: none; position: fixed; inset: 0; z-index: 99; background: var(--shade); color: var(--bone); font-size: 16px; align-items: center; justify-content: center; }
+@media (orientation: portrait) { #turn { display: flex; } }
+:root { --gm-0: #121417; --gm-1: #1d2126; --gm-2: #2a2f35; --gm-3: #3a4048; --lcd: #0a0f11; --glow: #bfe3f2;
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"); }
+#reader { position: absolute; left: 759px; top: 0; width: 165px; height: 427px; overflow: visible; }
+/* 画面の右の縁に落ちる、機械の影（画面が機械にはめ込まれて見えるように） */
+#reader::before { content: ""; position: absolute; left: -14px; top: 0; width: 14px; height: 427px; background: linear-gradient(90deg, transparent, rgba(0,0,0,.42)); pointer-events: none; }
+#reader .back { position: absolute; inset: 0; background: var(--grain), linear-gradient(90deg, var(--gm-0) 0, var(--gm-2) 3%, var(--gm-1) 14%, var(--gm-2) 60%, var(--gm-1) 96%, var(--gm-0) 100%); background-size: 160px 160px, auto; background-blend-mode: soft-light, normal;
+  box-shadow: inset 1px 0 0 rgba(255,255,255,.16), inset 2px 0 0 rgba(0,0,0,.6); }
+#reader .tray { position: absolute; left: 22px; top: 266px; width: 143px; height: 161px; background: linear-gradient(180deg, #07080a, #101317 30%, #0c0e11); box-shadow: inset 0 8px 10px -6px #000, inset 1px 0 0 rgba(255,255,255,.05), inset -1px 0 0 rgba(255,255,255,.05); }
+#cards { position: absolute; inset: 0; z-index: 1; perspective: 520px; perspective-origin: 93px 110px; }
+.card { position: absolute; left: 24.5px; top: 0; width: 138px; height: 218.8px; border-radius: 8.1px; overflow: clip; transform-origin: 50% 100%; will-change: transform;
+  box-shadow: 0 1px 0 rgba(234,231,212,.20) inset, 0 -1px 0 rgba(0,0,0,.5) inset, 1px 0 0 rgba(234,231,212,.08) inset, 2px 3px 0 rgba(4,3,5,.8); }
+.card canvas { display: block; width: 138px; height: 218.8px; }
+.card .sheen { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(234,231,212,.0) 40%, rgba(234,231,212,.5) 48%, rgba(151,178,193,.3) 52%, transparent 62%); mix-blend-mode: screen; opacity: 0; transform: translateX(-120%); }
+/* 差し込み口と名札の板 */
+#plate { position: absolute; z-index: 2; left: 18px; top: 196px; width: 147px; height: 70px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px), linear-gradient(180deg, var(--gm-3), var(--gm-2) 22%, var(--gm-1) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.6), 0 5px 6px -3px rgba(0,0,0,.8); }
+#plate .mouth { position: absolute; left: 3px; top: -4px; width: 141px; height: 5px; background: #030304; border-radius: 1px; box-shadow: 0 1px 0 rgba(255,255,255,.22); }
+#plate .led { position: absolute; left: 8px; top: 3px; width: 131px; height: 1.5px; background: var(--glow); opacity: .28; box-shadow: 0 0 5px 1px rgba(191,227,242,.6); transform-origin: 50% 50%; }
+#plate .disp { position: absolute; left: 7px; top: 11px; width: 110px; height: 48px; background: #04070a; border-radius: 2px; overflow: clip; cursor: pointer;
+  box-shadow: inset 0 1px 5px #000, inset 0 0 0 1px rgba(191,227,242,.06), 0 1px 0 rgba(255,255,255,.14); }
+#plate .disp .pic { position: absolute; left: 4px; top: 4px; width: 40px; height: 40px; overflow: clip; }
+#plate .disp .pic canvas { display: block; width: 40px; height: 40px; filter: drop-shadow(0 0 3px rgba(191,227,242,.3)); }
+#plate .disp .dn { position: absolute; left: 49px; top: 5px; font-family: var(--font-num); font-weight: 700; font-size: 15px; line-height: 17px; color: var(--glow); text-shadow: 0 0 5px rgba(191,227,242,.55); white-space: nowrap; }
+#plate .disp .dpos { position: absolute; left: 49px; top: 26px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 12px; line-height: 16px; color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.6); white-space: nowrap; }
+#plate .disp .dpos small { font-size: 8.5px; opacity: .6; margin-left: 1px; }
+#plate .screw { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #9aa1a9, #3a4047 70%); box-shadow: 0 0 0 1px #0d0f12; }
+/* シーズンの選局目盛り（読み取り機の左の縁）。上が新しい */
+#scale { position: absolute; z-index: 3; left: 0; top: 0; width: 18px; height: 427px; background: linear-gradient(90deg, #0b0d10, #15181c 70%, #0e1013); box-shadow: inset -1px 0 0 rgba(255,255,255,.07), inset 1px 0 0 rgba(255,255,255,.10); }
+#scale .tk { position: absolute; right: 0; width: 18px; height: 30px; cursor: pointer; }
+#scale .tk::before { content: ""; position: absolute; right: 0; top: 0; width: 5px; height: 1px; background: rgba(185,190,197,.5); }
+#scale .tk b { position: absolute; left: 2px; top: 4px; font-family: var(--font-num); font-weight: 800; font-size: 10px; line-height: 1; color: rgba(185,190,197,.62); }
+#scale .tk.on b { color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.7); }
+#scale .needle { position: absolute; left: 0; top: 0; width: 18px; height: 2px; background: var(--glow); box-shadow: 0 0 6px 1px rgba(191,227,242,.7); will-change: transform; }
+/* 着座の光: 差し込み口から画面へ走る */
+#beam { position: absolute; z-index: 4; left: 0; top: 195px; width: 777px; height: 2px; background: linear-gradient(90deg, transparent, rgba(191,227,242,.95) 70%, #fff); box-shadow: 0 0 8px 1px rgba(191,227,242,.8); transform-origin: 100% 50%; transform: scaleX(0); opacity: 0; pointer-events: none; }
+
+#power { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: radial-gradient(60% 70% at 40% 50%, #0d0b0e, #050405); }
+#power .btn { width: 68px; height: 68px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #3a4048, #15181c 70%); box-shadow: 0 0 0 2px #070809, 0 0 0 3px rgba(255,255,255,.12), 0 6px 14px rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; }
+#power .btn svg { width: 30px; height: 30px; filter: drop-shadow(0 0 5px rgba(191,227,242,.8)); animation: pw 1.6s ease-in-out infinite; }
+#power .hint { position: absolute; top: calc(50% + 50px); font-family: var(--font-mono); font-size: 11px; color: rgba(191,227,242,.7); }
+@keyframes pw { 50% { opacity: .45; } }
+#cards .card.next::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1.5px; background: var(--glow); box-shadow: 0 0 6px 1px rgba(191,227,242,.7); opacity: .85; animation: nx 1.4s ease-in-out infinite; }
+@keyframes nx { 50% { opacity: .35; } }
+#reader .ready { position: absolute; z-index: 2; left: 20px; top: 276px; width: 4px; height: 4px; border-radius: 50%; background: var(--glow); box-shadow: 0 0 6px 1px rgba(191,227,242,.8); animation: nx 1.4s ease-in-out infinite; }
+#plate .prog { position: absolute; left: 8px; top: 3px; width: 131px; height: 1.5px; background: #fff; box-shadow: 0 0 6px 1px rgba(191,227,242,.9); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* 保管棚 */
+#cab { position: absolute; inset: 0; z-index: 30; background: var(--grain), linear-gradient(180deg, #1c2025, #121417 60%, #0e1013); background-size: 160px 160px, auto; background-blend-mode: soft-light, normal; overflow: clip; }
+#cab .bar { position: absolute; left: 0; right: 0; top: 0; height: 40px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px), linear-gradient(180deg, var(--gm-3), var(--gm-2) 30%, var(--gm-1)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 3px 6px rgba(0,0,0,.6); z-index: 2; }
+#cab .total { position: absolute; left: 14px; top: 9px; height: 22px; padding: 0 8px; background: var(--lcd); border-radius: 2px; box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255,255,255,.12); display: flex; align-items: baseline; gap: 5px; }
+#cab .total span { font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 17px; line-height: 22px; color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.65); }
+#cab .total small { font-family: var(--font-mono); font-size: 8px; color: rgba(191,227,242,.6); }
+#cab .games { position: absolute; right: 12px; top: 9px; display: flex; gap: 6px; }
+#cab .gm { display: flex; align-items: center; gap: 5px; height: 22px; padding: 0 7px; border-radius: 2px; background: linear-gradient(180deg, #2f353c, #1c2025); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.6); }
+#cab .gm b { font-family: var(--font-num); font-weight: 700; font-size: 12px; color: #8a929b; }
+#cab .gm i { font-style: normal; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 11px; color: rgba(191,227,242,.45); }
+#cab .gm.on { box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 1px rgba(191,227,242,.35); } #cab .gm.on b { color: var(--bone); } #cab .gm.on i { color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.6); }
+#cab .shelf { position: absolute; left: 0; right: 0; top: 40px; bottom: 0; overflow: clip; }
+#cab .shelf::before { content: ""; position: absolute; left: 0; right: 0; top: 196px; height: 3px; background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(0,0,0,.6)); }
+#cab .track { position: absolute; left: 0; top: 0; height: 100%; will-change: transform; }
+.case { position: absolute; width: 124px; height: 168px; transform-origin: 50% 100%; }
+.case .peek i { position: absolute; left: 10px; width: 104px; height: 16px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #3a2635, #2d1b27); box-shadow: inset 0 1px 0 rgba(234,231,212,.25); }
+.case .peek i:nth-child(1) { top: -12px; left: 13px; width: 98px; } .case .peek i:nth-child(2) { top: -8px; } .case .peek i:nth-child(3) { top: -4px; left: 8px; width: 108px; }
+.case .box { position: absolute; inset: 0; border-radius: 5px; background: var(--grain), linear-gradient(180deg, var(--gm-3), var(--gm-2) 30%, var(--gm-1)); background-size: 160px 160px, auto; background-blend-mode: soft-light, normal;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(0,0,0,.6), 0 6px 10px -2px rgba(0,0,0,.75); }
+.case .win { position: absolute; left: 8px; top: 8px; width: 108px; height: 92px; background: #0b0c0e; border-radius: 2px; overflow: clip; box-shadow: inset 0 2px 5px #000, 0 1px 0 rgba(255,255,255,.14); }
+.case .win canvas { display: block; width: 108px; height: 92px; }
+.case .win::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.14), transparent 40%); }
+.case .nm2 { position: absolute; left: 9px; top: 106px; font-family: var(--font-num); font-weight: 700; font-size: 20px; line-height: 1; color: #c6cbd2; text-shadow: 0 -1px 0 rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.12); white-space: nowrap; }
+.case .jp { position: absolute; left: 10px; top: 130px; font-size: 9px; color: #7d8590; }
+.case .cnt { position: absolute; right: 8px; bottom: 8px; height: 17px; padding: 0 6px; background: var(--lcd); border-radius: 2px; box-shadow: inset 0 1px 3px #000; }
+.case .cnt span { font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 12px; line-height: 17px; color: var(--glow); text-shadow: 0 0 4px rgba(191,227,242,.6); }
+.case.unk .win { background: repeating-linear-gradient(45deg, #15181c 0 6px, #1b1f24 6px 12px); }
+.case.press { transform: scale(.97); }
+.case.fly { z-index: 45; transform-origin: 0 0; }
+
+#plate .eject { position: absolute; right: 6px; top: 11px; width: 21px; height: 48px; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #9aa3ad;
+  background: linear-gradient(180deg, #3a4048, #20242a); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 0 #0a0b0d, 0 2px 3px rgba(0,0,0,.6); cursor: pointer; }
+#plate .eject svg { width: 10px; height: 10px; }
+#plate .eject.press { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0,0,0,.6); color: var(--glow); }
+.card { transform-style: preserve-3d; }
+
+/* 棚は凹んだトレイの中なので、奥（下）ほど暗い */
+#trayshade { position: absolute; z-index: 60; left: 22px; top: 272px; width: 143px; height: 155px; pointer-events: none; background: linear-gradient(180deg, rgba(4,4,6,.10), rgba(4,4,6,.38) 45%, rgba(4,4,6,.62)); }
+/* 画面の光が読み取り機の縁に映る（今の映像の平均の色） */
+#reader .spill { position: absolute; z-index: 3; left: 0; top: 0; width: 48px; height: 427px; pointer-events: none; background: linear-gradient(90deg, rgb(var(--spill, 120 120 140) / .22), transparent); mix-blend-mode: screen; transition: background 400ms; }
+/* レア度の色（Apex の装備の段）: 枚数の段で。ケースの上の細い帯と角の印だけ */
+:root { --t-common: #b9bec5; --t-rare: #3b8ff0; --t-epic: #b04cd9; --t-legend: #e9b448; }
+.case .tier { position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: 5px 5px 0 0; background: var(--tc); box-shadow: 0 0 8px -1px var(--tc); }
+.case .tier::after { content: ""; position: absolute; right: 7px; top: 7px; width: 7px; height: 7px; background: var(--tc); transform: rotate(45deg); }
+.case.t-legend { --tc: var(--t-legend); } .case.t-epic { --tc: var(--t-epic); } .case.t-rare { --tc: var(--t-rare); } .case.t-common { --tc: var(--t-common); } .case.unk { --tc: #5b616a; } .case.t-all { --tc: var(--ax-red); } .case.t-all .nm2 { color: #e9ecef; }
+
+/* Apex の文法: 機械は 45° の面取り、選択中・今だけ赤（面積 3% 以下）、太い下線1本。カードは規格の丸みのまま */
+:root { --ax-red: #e2371f; --ax-deep: #ae1b25; --ax-org: #fb4e20; --ax-gold: #dcb63d; }
+.case .box { border-radius: 0; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.case .tier { border-radius: 0; }
+.case .tier::after { right: 18px; }
+.case.press .box, .case.sel .box { box-shadow: inset 0 0 0 2px var(--ax-red), inset 0 -3px 0 2px var(--ax-org), 0 6px 10px -2px rgba(0,0,0,.75); }
+#cab .gm { border-radius: 0; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); padding: 0 11px; }
+#cab .gm.on { background: linear-gradient(180deg, #c42a24, var(--ax-deep)); box-shadow: inset 0 -2px 0 var(--ax-org); }
+#cab .gm.on b { color: #fff; } #cab .gm.on i { color: #ffd9cf; text-shadow: none; }
+#cab .total { border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+#plate { clip-path: polygon(0 -10px, 100% -10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+#scale .needle { background: var(--ax-red); box-shadow: 0 0 6px 1px rgba(242,60,40,.75); height: 2px; }
+#scale .needle::after { content: ""; position: absolute; right: -4px; top: -3px; width: 8px; height: 8px; background: var(--ax-red); transform: rotate(45deg); }
+#scale .tk.on b { color: #fff; text-shadow: 0 0 4px rgba(242,60,40,.6); }
+#cap .ss { border-radius: 0; clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
+/* 決めの瞬間: 斜めの赤い帯にレジェンド名が走る */
+#lockin { position: absolute; z-index: 44; left: -10%; top: 150px; width: 120%; height: 96px; pointer-events: none; opacity: 0; transform: skewY(-6deg);
+  background: linear-gradient(90deg, transparent, rgba(174,27,37,.92) 12%, rgba(226,55,31,.95) 50%, rgba(174,27,37,.92) 88%, transparent); box-shadow: 0 -2px 0 var(--ax-org) inset, 0 2px 0 rgba(255,255,255,.25) inset; overflow: clip; }
+#lockin b { position: absolute; left: 22%; top: 10px; font-family: var(--font-num); font-weight: 700; font-size: 70px; line-height: 76px; color: #fff; letter-spacing: -.01em; white-space: nowrap; text-shadow: 0 3px 0 rgba(90,8,12,.55); }
+#lockin i { position: absolute; right: 22%; top: 14px; font-style: normal; font-family: var(--font-mono); font-size: 11px; color: rgba(255,230,220,.85); }
+
+.live { position: relative; }
+.live::before { content: ""; position: absolute; left: 0; right: 0; top: -100%; height: 200%; z-index: 3; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.30) 0 1px, transparent 1px 3px); animation: roll 6s linear infinite; }
+.live::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30%; z-index: 3; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(191,227,242,.07), transparent); transform: translateY(-120%); animation: sweep 4.6s cubic-bezier(.4,0,.6,1) infinite; }
+.live canvas { animation: flick 7s steps(1) infinite; }
+@keyframes roll { to { transform: translateY(50%); } }
+@keyframes sweep { 0%, 55% { transform: translateY(-120%); } 100% { transform: translateY(380%); } }
+@keyframes flick { 0%, 100% { opacity: 1; transform: none; } 61% { opacity: .86; } 62% { opacity: 1; } 93% { transform: translateX(1.5px); opacity: .9; } 94% { transform: translateX(-1px); } 95% { transform: none; opacity: 1; } }
+.case .win.live::before { animation-duration: 7.5s; animation-delay: var(--dl, 0s); } .case .win.live::after { animation-delay: var(--dl, 0s); } .case .win.live canvas { animation-delay: var(--dl, 0s); }
+
+#frame { position: absolute; inset: 0; }
+#frame .slot { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+#frame .slot.on { opacity: 1; }
+#frame iframe { width: 759px; height: 427px; border: 0; pointer-events: none; display: block; }
+body.ytlive #vid { display: none; }
+#osd { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none; opacity: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,7,10,.72); clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+#osd svg { width: 26px; height: 26px; color: var(--glow); filter: drop-shadow(0 0 5px rgba(191,227,242,.7)); }
+
+#seekfb { position: absolute; top: 50%; margin-top: -22px; height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 6px; pointer-events: none; opacity: 0;
+  background: rgba(4,7,10,.62); clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 18px; color: var(--glow); text-shadow: 0 0 5px rgba(191,227,242,.7); }
+#cap.seeking .pg { height: 3px; } #cap.seeking .pg i { box-shadow: 0 0 8px rgba(191,227,242,1); }
+
+.fc { position: absolute; left: 0; top: 0; width: 138px; height: 218.8px; border-radius: 8.1px; overflow: clip; transform-origin: 50% 50%; will-change: transform; pointer-events: none;
+  background: linear-gradient(180deg, #46303f, #2d1b27); box-shadow: 0 1px 0 rgba(234,231,212,.2) inset, 3px 5px 0 rgba(4,3,5,.55); }
+.fc canvas { display: block; width: 138px; height: 218.8px; }
+#cards .card.pending { visibility: hidden; }
+
+#cab .heroslot { position: absolute; left: 14px; top: 54px; width: 214px; height: 354px; z-index: 3; }
+#cab .shelf { left: 240px; }
+#cab .shelf::before { display: none; }
+#cab .shelf::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 18px; z-index: 2; pointer-events: none; background: linear-gradient(90deg, rgba(8,9,11,.85), transparent); }
+#cab .board { position: absolute; left: 0; height: 9px; background: linear-gradient(180deg, #4a5059, #2a2f35 40%, #15181c); box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 6px 8px -2px rgba(0,0,0,.7); }
+#cab .divider { position: absolute; left: 233px; top: 50px; bottom: 10px; width: 2px; background: linear-gradient(180deg, transparent, rgba(255,255,255,.08) 20%, rgba(255,255,255,.08) 80%, transparent); z-index: 2; }
+.case.hero .win { left: 10px; top: 12px; }
+.case.hero .nm2 { left: 12px; letter-spacing: .01em; }
+.case.hero .jp { left: 13px; font-size: 10px; }
+.case.hero .cnt { height: 26px; padding: 0 9px; right: 12px; bottom: 12px; }
+.case.hero .cnt span { font-size: 19px; line-height: 26px; }
+.case.hero .latest { position: absolute; left: 13px; bottom: 16px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 11px; color: rgba(191,227,242,.8); text-shadow: 0 0 4px rgba(191,227,242,.45); }
+.case.hero .latest i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: 8px; color: #7d8590; margin-right: 5px; text-shadow: none; }
+.case.hero .box { clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px)); }
+.case.unk .box { background: repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 8px, transparent 8px 16px), linear-gradient(180deg, #2c3036, #1a1d21); }
+
+.card .ph { position: absolute; inset: 0; background: linear-gradient(180deg, #1d141c 0 17%, #46303f 17%, #3a3552); }
+.card .ph b { position: absolute; left: 7px; top: 6px; font-family: var(--font-num); font-weight: 700; font-size: 21px; line-height: 1; color: var(--bone); }
+.card .ph i { position: absolute; right: 7px; top: 8px; font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: 13px; line-height: 15px; background: var(--steel); color: var(--shade); padding: 0 4px 0 0; }
+.card .ph i u { text-decoration: none; background: var(--shade); color: var(--steel); padding: 0 3px; margin-right: 3px; }
+/* ケースの天: 本のページの天のように、カードの縁が縦の細い線で並んで見える */
+.case .peek { position: absolute; left: 6px; right: 12px; top: -7px; height: 8px; background: repeating-linear-gradient(90deg, #4a3443 0 1px, #2a1c27 1px 2.6px), #2d1b27; clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(234,231,212,.2); }
+.case .peek i { display: none; }
+
+/* 送っている間は、重ね合わせの重い効果を止める（反射・画面の光の映り込み・名札の画面の走査線） */
+#reader.fast .sheen, #reader.fast .spill { display: none; }
+#reader.fast .live::before, #reader.fast .live::after, #reader.fast .live canvas { animation-play-state: paused; }
+
+#cab .gm { cursor: pointer; } #cab .gm.off { opacity: .45; cursor: default; }
+
+#scale .tk b.ym { top: 1px; line-height: 10px; } #scale .tk b.ym i { display: block; font-style: normal; font-size: 7px; line-height: 8px; opacity: .75; }
+
+/* 仮のカード: 本物と同じ型の絵（--tpl）の上に、同じ位置と大きさの文字（1024 幅の座標 × 0.1348） */
+.card .ph { position: absolute; inset: 0; background: var(--tpl) 0 0 / 100% 100% no-repeat !important; }
+.card .ph b { position: absolute; left: 7px; top: 4.4px; display: flex; align-items: flex-start; font-family: var(--font-num); font-weight: 800; font-size: 14px; line-height: 16px; color: var(--tpl-num, #f4f1ea); }
+.card .ph i { position: absolute; right: 7px; top: 8.4px; height: 10.8px; display: flex; align-items: center; font-style: normal; font-family: var(--font-num); font-weight: 800; font-size: 10px; line-height: 10.8px; background: var(--tpl-tag, #e2371f); color: var(--tpl-tagfg, #fff); padding: 0 1.9px 0 0; }
+.card .ph b q { quotes: none; display: block; margin: 3.4px 0 0 1.6px; font-family: var(--font-mono); font-weight: 500; font-size: 3.3px; line-height: 6.9px; color: var(--tpl-numsub, #8d9097); }
+.card .ph small.l { left: 56.6px; }
+.card .ph i u { text-decoration: none; display: flex; align-items: center; justify-content: center; height: 10.8px; min-width: 6.7px; padding: 0 1.35px; box-sizing: border-box; margin-right: 1.6px; font-size: 7.3px; background: var(--tpl-pre, #17181b); color: var(--tpl-prefg, #e2371f); }
+.card .ph em { position: absolute; left: 6.2px; top: 107px; font-style: normal; font-family: var(--font-num); font-weight: 800; font-size: 20.2px; line-height: 22px; color: var(--tpl-ink, #121316); white-space: nowrap; max-width: 92px; overflow: hidden; }
+.card .ph small { position: absolute; left: 7px; top: 133px; font-family: var(--font-mono); font-size: 5.1px; line-height: 6px; color: var(--tpl-ink, #121316); }
+.card .ph span { position: absolute; left: 7.3px; right: 9px; top: 150px; font-family: "Klee One", var(--font-jp); font-weight: 600; font-size: 8.2px; line-height: 9.5px; color: var(--tpl-ink, #121316); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card .ph::after { display: none; }
+/* 時間の文字盤: 目盛りをなぞっている間だけ、指の高さの横に出る */
+#dial { position: absolute; z-index: 40; left: 560px; top: 0; width: 196px; height: 112px; pointer-events: none; opacity: 0; transform: translateX(30px);
+  background: linear-gradient(180deg, rgba(10,13,16,.92), rgba(4,6,8,.94)); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(191,227,242,.15); }
+#dial .big { position: absolute; left: 12px; top: 6px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 46px; line-height: 52px; color: var(--glow); text-shadow: 0 0 10px rgba(191,227,242,.7); letter-spacing: .02em; }
+#dial .big i { font-style: normal; font-size: 22px; vertical-align: top; margin-right: 2px; opacity: .8; }
+#dial .date { position: absolute; left: 14px; top: 60px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 15px; color: var(--glow); opacity: .85; }
+#dial .cnt { position: absolute; right: 22px; top: 60px; font-family: "Doto", var(--font-mono); font-weight: 900; font-size: 11px; color: rgba(191,227,242,.6); }
+#dial .bar { position: absolute; left: 14px; right: 22px; bottom: 14px; height: 4px; background: rgba(191,227,242,.12); }
+#dial .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--glow); box-shadow: 0 0 6px rgba(191,227,242,.8); }
+#dial .bar b { position: absolute; top: -3px; width: 2px; height: 10px; background: rgba(191,227,242,.35); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+<script>
+function fitNow() { const W = (window.visualViewport && visualViewport.width) || innerWidth, H = (window.visualViewport && visualViewport.height) || innerHeight; const k = Math.min(W / 924, H / 427); const ox = (W - 924 * k) / 2, oy = (H - 427 * k) / 2; const a = document.getElementById('app'); if (a) a.style.transform = `translate(${ox}px,${oy}px) scale(${k})`; window.SCLX = k; window.OX = ox; window.OY = oy; }
+if (window.visualViewport) visualViewport.addEventListener('resize', fitNow); [300, 800].forEach(t => addEventListener('orientationchange', () => setTimeout(fitNow, t)));
+document.addEventListener('DOMContentLoaded', fitNow); addEventListener('resize', fitNow); addEventListener('orientationchange', () => setTimeout(fitNow, 200));
+// 全画面と横向き: 指を離したとき（click）に要求する。Android の Chrome はタッチの pointerdown を「人の操作」と数えず、そこで要求すると拒否される
+function goFull() { const el = document.documentElement; if (document.fullscreenElement || !el.requestFullscreen) return; el.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).then(() => setTimeout(fitNow, 300)).catch(e => console.log('fullscreen', e && e.message)); }
+if (!navigator.webdriver && matchMedia('(pointer: coarse)').matches) addEventListener('click', goFull, true);
+document.addEventListener('fullscreenchange', () => setTimeout(fitNow, 250));
+</script>
+<script type="importmap">{ "imports": { "three": "vendor/three/three.module.min.js", "three/addons/": "vendor/three/" } }</script>
+</head>
+<body>
+<div id="turn">横向きにしてください</div>
+<div id="app">
+<div id="power"><div class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="#bfe3f2" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></div><span class="hint">タップで起動</span></div>
+<div id="cab"><div class="bar"><div class="total"><span></span><small>CLIPS</small></div><div class="games"></div></div><div class="heroslot"></div><div class="shelf"><div class="track"></div></div></div>
+<div id="world">
+  <div id="screen"><div id="frame"></div><img id="vid" alt=""><div id="osd"></div><div id="seekfb"></div><canvas id="scan" width="759" height="427"></canvas>
+    <div id="mask"></div><div id="glare"></div><div id="glass"></div>
+    <div id="cap"><div class="strip"><div class="ss"><i>S</i><b class="sn">23</b></div><div class="bar"><span class="txt"></span><span class="cur"></span></div><span class="no"><i>No.</i><span></span></span><div class="pg"><i></i></div></div></div></div>
+  <div id="reader">
+    <div class="back"></div><div class="tray"></div>
+    <div id="cards"><div id="trayshade"></div></div><div class="spill"></div>
+    <div id="plate"><div class="mouth"></div><div class="led"></div><div class="prog"></div><div class="disp live"><div class="pic"></div><span class="dn"></span><span class="dpos"></span></div><div class="eject" title="デッキを取り出す"><svg viewBox="0 0 12 12"><path d="M6 2 L10.5 7 H1.5 Z M1.5 8.6 H10.5 V10 H1.5 Z" fill="currentColor"/></svg></div>
+      <span class="screw" style="left:3px;top:62px"></span><span class="screw" style="right:3px;top:62px"></span></div>
+    <div id="scale"><div class="needle"></div></div>
+  </div>
+  <div id="beam"></div>
+  <div id="dial"><div class="big"></div><div class="date"></div><div class="cnt"></div><div class="bar"><i></i></div></div>
+  
+</div>
+</div>
+<script type="module">
+import { loadFonts, engrave } from './card.js';
+import { drawFace2, MRZ, THEMES } from './face2.js';
+const $ = id => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+
+// ---- データ（上が新しい。番号は古い方から 001）
+const DECKS = await (await fetch('assets/decks.json')).json();
+let D = null, deck = [], N = 0, LEGEND = '', HOLDER = null;
+const cyc = await (await fetch('assets/cyc.json')).json();
+const stillOf = d => { const hit = cyc.find(c => c.t === d.t); const h = [...d.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); return `assets/cyc/${hit ? cyc.indexOf(hit) : h % 8}.png`; };
+// 静止画: 取得済みの本物を先に。無ければ Apex は仮の絵、Deadlock は絵なし（別のゲームの絵を出さない）
+const stillImg = d => loadImg(`assets/frames/${d.id}/still.jpg`).then(im => im || (d.src === 'chapter' || GAME !== 'apex' ? null : loadImg(stillOf(d))));   // 代わりの絵（Apex の画面）は Apex だけ
+const imgs = new Map(); const loadImg = src => { if (!imgs.has(src)) imgs.set(src, new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; })); return imgs.get(src); };
+let GAME = 'apex'; let G = DECKS;
+const LEGf = () => G.legends || {};
+const legOf = d => (d.lk && LEGf()[d.lk]) ? LEGf()[d.lk] : null;
+const clipOf = i => { const d = deck[i]; const lg = D.key === 'all' ? legOf(d) : null; return { game: GAME, src: d.src, legend: lg ? lg.name : (D.key === 'all' ? 'UNSORTED' : LEGEND), no: d.g, of: DECKS.total, pos: N - i, s: d.s, sp: d.sp || 'S', sn: d.sn || (d.s || '').slice(1), kind: GAME === 'deadlock' ? 'hero / ヒーロー' : GAME === 'other' ? 'game / ゲーム' : 'legend / レジェンド', d: d.d.replace(/-/g, '.'), dur: d.dur, t: d.t }; };
+await loadFonts();
+
+// ---- カードの面（作り置き）
+const faces = new Map();
+async function face(i) { if (faces.has(i)) return faces.get(i); const c = clipOf(i); const p = Promise.all([stillImg(deck[i]), document.fonts.load('600 62px "Klee One"', c.t), document.fonts.load('700 62px "IBM Plex Sans JP"', c.t)]).then(async ([img]) => { let h = HOLDER; if (D.key === 'all') { const lg = legOf(deck[i]); h = lg && lg.img ? await loadImg('assets/' + lg.img) : null; } return drawFace2({ ...c, img, holder: h }, 400); }); faces.set(i, p); return p; }
+const scans = new Map();
+async function scanImg(i) { if (scans.has(i)) return scans.get(i); const p = stillImg(deck[i]).then(img => engrave(img, 759, 427, { lines: 3 })); scans.set(i, p); return p; }
+
+// ---- カードの置き場所（帯の中の座標）
+const SLOT_Y = 16, RACK_Y = 272, PITCH = 36;
+const els = new Map();
+let cheap = false;   // 速く送っている間は true（写真を刷る重い処理を走らせない）
+function el(i) {
+  if (els.has(i)) return els.get(i);
+  const e = document.createElement('div'); e.className = 'card'; const c = clipOf(i);
+  e.innerHTML = `<div class="ph"><b>${String(c.no).padStart(3, '0')}<q>No.<br>/${String(c.of).padStart(3, '0')}</q></b><i><u>${c.sp}</u>${c.sn}</i><em>${c.legend}</em><span>${c.t}</span><small>${c.d}</small><small class="l">${c.dur}s</small></div><div class="sheen"></div>`;
+  $('cards').appendChild(e); els.set(i, e); if (!cheap) needFace(e, i); return e;
+}
+function needFace(e, i) { if (e.dataset.f) return; e.dataset.f = 1; face(i).then(cv => { if (els.get(i) !== e) return; cv.style.cssText = 'display:block;width:138px;height:218.8px;position:relative;z-index:1'; e.prepend(cv); }); }
+// 状態: cur = 差さっているカード、p = 上へ弾く途中（0〜1）、ro = 棚の送り（なぞっている間）
+let cur = 0, p = 0, ro = 0, mode = 'idle';
+const tilt = { x: 0, y: 0, tx: 0, ty: 0, vx: 0, vy: 0 }; let tiltRun = 0;
+function tiltTo(x, y) { tilt.tx = x; tilt.ty = y; if (!tiltRun) tiltRun = requestAnimationFrame(tiltStep); }
+function tiltStep() { tilt.vx += (tilt.tx - tilt.x) * .16; tilt.vy += (tilt.ty - tilt.y) * .16; tilt.vx *= .6; tilt.vy *= .6; tilt.x += tilt.vx; tilt.y += tilt.vy; place();
+  if (Math.abs(tilt.tx - tilt.x) + Math.abs(tilt.ty - tilt.y) + Math.abs(tilt.vx) + Math.abs(tilt.vy) > .02) tiltRun = requestAnimationFrame(tiltStep); else { tilt.x = tilt.tx; tilt.y = tilt.ty; place(); tiltRun = 0; } }
+// 触った場所から傾き（カードの中心からのずれで、最大 9 度）
+function tiltFrom(lx, ly, vy = 0) { const cx = 759 + 24.5 + 69, cy = 16 + 110; tiltTo(Math.max(-5, Math.min(5, -(ly - cy) / 110 * 4 + vy * 7)), Math.max(-5, Math.min(5, (lx - cx) / 69 * 4.5))); }
+function place() {
+  const keep = new Set();
+  // 差さっているカード（p で上へ抜ける）
+  const slotI = (mode === 'scrub' || mode === 'jumpdrag') ? Math.round(ro) : cur;
+  const put = (i, y, rot, op, z) => { if (i < 0 || i >= N) return; const e = el(i); keep.add(i);
+    const tl = i === slotI && p < .05 ? ` rotateX(${(rot + tilt.x).toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg)` : ` rotateX(${rot.toFixed(1)}deg)`;
+    e.style.transform = `translateY(${y.toFixed(1)}px)${tl}`; e.style.opacity = op; e.style.zIndex = z;
+    if (i === slotI) { const sh = e.querySelector('.sheen'); if (sh && !sh.getAnimations().length) { sh.style.opacity = Math.min(.5, (Math.abs(tilt.x) + Math.abs(tilt.y)) / 14); sh.style.transform = `translateX(${(tilt.y * 9).toFixed(1)}%)`; } } };
+  if (mode === 'scrub' || mode === 'jumpdrag') {
+    // 棚の送り: ro の小数分だけ棚が上へずれる。差し込み口には ro に一番近いカード
+    const slot = Math.round(ro);
+    put(slot, SLOT_Y + popY, 0, 1, 2);
+    const base = Math.floor(ro);
+    for (let i = base + 1; i <= base + 7; i++) { if (i === slot) continue; const y = RACK_Y + (i - ro - 1) * PITCH; if (y > 427) break; put(i, Math.max(y, RACK_Y - 40), 0, 1, 10 + i - base); }
+  } else if (p < 0) {
+    const e1 = Math.min(1, -p);
+    put(cur - 1, SLOT_Y - (1 - e1) * 232, -(1 - e1) * 38, e1 < .2 ? e1 * 5 : 1, 5);
+    put(cur, SLOT_Y + e1 * (RACK_Y - SLOT_Y), 0, 1, 4);
+    for (let i = cur + 1; i <= cur + 7; i++) { const k = i - cur - 1, ek = Math.max(0, (e1 - .06 * k) / (1 - .06 * k)); const y = RACK_Y + (i - cur - 1) * PITCH + ek * PITCH; if (y > 427) break; put(i, y, 0, 1, 10 + i - cur); }
+  } else {
+    const e1 = Math.min(1, p);
+    put(cur, SLOT_Y - e1 * 232, -e1 * 38, e1 > .8 ? Math.max(0, 1 - (e1 - .8) * 5) : 1, 3);
+    put(cur + 1, RACK_Y - e1 * (RACK_Y - SLOT_Y) - Math.max(0, p - 1) * 30, 0, 1, 4);
+    for (let i = cur + 2; i <= cur + 8; i++) { const k = i - cur - 2, ek = Math.max(0, (p - .06 * k) / (1 - .06 * k)); const y = RACK_Y + (i - cur - 1) * PITCH - ek * PITCH; if (y > 427) break; put(i, y, 0, 1, 10 + i - cur); }
+  }
+  for (const [i, e] of els) if (!keep.has(i)) { e.remove(); els.delete(i); }
+  if (!cheap) for (const [i, e] of els) needFace(e, i);
+  $('reader').classList.toggle('fast', mode === 'scrub' || mode === 'jumpdrag');
+  const nx = mode === 'scrub' ? Math.round(ro) + 1 : cur + 1; for (const [i, e] of els) e.classList.toggle('next', i === nx && p < .2);
+}
+
+// ---- 字幕: 機械読み取りの記号から題名へほどける（テレビの字幕のように左から入る）
+const GL = '<<<ABCDEFGHJKLMNPRSTUVWXYZ0123456789';
+let capTimer = 0;
+function caption(i, animate) {
+  const c = clipOf(i), cap = $('cap'), strip = cap.querySelector('.strip'), bar = cap.querySelector('.bar'), txt = cap.querySelector('.txt'), curE = cap.querySelector('.cur');
+  cap.querySelector('.sn').textContent = c.sn; cap.querySelector('.ss i').textContent = c.sp; cap.querySelector('.no span').textContent = String(c.no).padStart(4, '0'); cancelAnimationFrame(capTimer);
+  const fitCap = () => { txt.style.fontSize = ''; let f = 12.5; while (txt.scrollWidth > bar.clientWidth - 4 && f > 9.5) { f -= .5; txt.style.fontSize = f + 'px'; } };
+  if (!animate) { txt.textContent = c.t; txt.className = 'txt'; fitCap(); return; }
+  strip.animate([{ transform: 'scaleX(.02)', transformOrigin: '0 50%' }, { transform: 'scaleX(1.01)', transformOrigin: '0 50%', offset: .7 }, { transform: 'scaleX(1)', transformOrigin: '0 50%' }], { duration: 240, easing: 'cubic-bezier(.16,1,.3,1)' });
+  const target = [...c.t], m = MRZ(c), t0 = performance.now();
+  txt.className = 'txt mono'; txt.textContent = c.t; fitCap();
+  const step = now => { const k = Math.min(1, (now - t0 - 120) / 420); const n = Math.max(0, Math.floor(target.length * k));
+    let s = target.slice(0, n).join(''); for (let j = n; j < Math.min(target.length, n + 6); j++) s += Math.random() < .5 ? m[(j * 7 + (now / 40 | 0)) % m.length] : GL[(Math.random() * GL.length) | 0];
+    txt.textContent = s; if (k >= .2) txt.className = 'txt';
+    // 打ち出しの光る四角: 確定した文字の右端
+    const r = document.createRange(); if (txt.firstChild) { r.setStart(txt.firstChild, 0); r.setEnd(txt.firstChild, Math.min(txt.firstChild.length, n)); } const w = txt.firstChild ? r.getBoundingClientRect().width / SCL : 0;
+    curE.style.opacity = k < 1 ? 1 : 0; curE.style.transform = `translateX(${w + 1}px)`;
+    if (k < 1) capTimer = requestAnimationFrame(step); else fitCap(); };
+  capTimer = requestAnimationFrame(step);
+}
+function spillFrom(src) { (typeof src === 'string' ? loadImg(src) : stillImg(src)).then(img => { if (!img) return; const c = document.createElement('canvas'); c.width = c.height = 6; const x = c.getContext('2d'); x.drawImage(img, img.width * .6, 0, img.width * .4, img.height, 0, 0, 6, 6); const d = x.getImageData(0, 0, 6, 6).data; let r = 0, g = 0, b = 0; for (let k = 0; k < d.length; k += 4) { r += d[k]; g += d[k + 1]; b += d[k + 2]; } const n = d.length / 4; $('reader').style.setProperty('--spill', `${r / n | 0} ${g / n | 0} ${b / n | 0}`); }); }
+// ---- 本物の再生（YouTube）。試験の自動ブラウザと ?noyt では静止画のまま
+const YTON = (!navigator.webdriver || q.has('yt')) && !q.has('noyt');
+const PN = 4; const players = []; let seenK = -1, wantK = -1, onPlaying = null, paused = false;
+if (YTON) { document.body.classList.add('yt'); window.onYouTubeIframeAPIReady = ytBoot; const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(sc); }
+function ytBoot() {
+  for (let i = 0; i < PN; i++) {
+    const slot = document.createElement('div'); slot.className = 'slot'; const host = document.createElement('div'); slot.appendChild(host); $('frame').appendChild(slot);
+    const pl = new YT.Player(host, { width: 759, height: 427, playerVars: { controls: 0, disablekb: 1, fs: 0, rel: 0, playsinline: 1, iv_load_policy: 3, modestbranding: 1, cc_load_policy: 0 },
+      events: { onStateChange: e => onYT(i, e.data), onReady: () => noCC(i), onApiChange: () => noCC(i) } });
+    pl.el = slot; pl.clip = -1; pl.dk = ''; pl.armed = false; players.push(pl);
+  }
+}
+function noCC(k) { const pl = players[k]; if (!pl) return; try { pl.unloadModule && pl.unloadModule('captions'); pl.unloadModule && pl.unloadModule('cc'); pl.setOption && pl.setOption('captions', 'track', {}); } catch (e) {} }
+const ytOk = () => players.length === PN && players.every(p => p.loadVideoById);
+// 準備ができたら: 待っていた1本を流す。デッキを直接開いたときは今のカードを流す
+if (YTON) { const iv = setInterval(() => { if (!ytOk()) return; clearInterval(iv); if (pendingShow !== null) { const c = pendingShow; pendingShow = null; showYT(c); } else if (document.getElementById('cab').style.display === 'none' && seenK < 0) showYT(cur); }, 200); }
+window.__yt = { players, get seen() { return seenK; }, get cur() { return cur; }, deckA: c => deck[c]?.a, deckB: c => deck[c]?.b };
+function preloadYT(k, c) { const pl = players[k]; if (!pl || !pl.loadVideoById || c < 0 || c >= N) return; if (pl.clip === c && pl.dk === D.key) return;
+  pl.clip = c; pl.dk = D.key; pl.armed = false; pl.mute(); const x = deck[c], r = runOf(c); pl.vid = x.v; pl.runA = deck[r[0]].a; pl.runB = deck[r[1]].b; pl.loadVideoById({ videoId: x.v, startSeconds: x.a, endSeconds: pl.runB }); }
+// c を含む「同じ動画の中で切れ目なく続いているクリップの並び」の最初と最後
+const cont = (i, j) => deck[i] && deck[j] && deck[i].v === deck[j].v && Math.abs(deck[j].a - deck[i].b) < 1;
+const sameRun = (i, j) => i >= 0 && j >= 0 && i < N && j < N && runOf(i)[0] === runOf(j)[0];
+function runOf(c) { let a = c, b = c; while (a > 0 && cont(a - 1, a)) a--; while (b < N - 1 && cont(b, b + 1)) b++; return [a, b]; }
+const ARMPAUSE = !q.has('armplay');   // 待機中は一時停止で待たせる（流し続けても YouTube の一時停止の印は消えなかったため。?armplay で流し続ける形）
+// 待機中の再生画面は、開始位置から3秒進んだら開始位置へ戻す（音は消したまま）
+setInterval(() => { if (ARMPAUSE || !ytOk()) return; players.forEach((pl, k) => { if (k === wantK || k === seenK || !pl.armed || !pl.getCurrentTime || pl.clip < 0 || pl.dk !== D.key) return; const a = deck[pl.clip]?.a; if (a !== undefined && pl.getCurrentTime() > a + 3) pl.seekTo(a, true); }); }, 400);
+function swapToYT(k) { document.body.classList.add('ytlive'); if (seenK >= 0 && seenK !== k) { const o = players[seenK]; o.el.classList.remove('on'); o.mute(); if (ARMPAUSE) o.pauseVideo(); else { const c2 = o.clip; setTimeout(() => { if (seenK !== players.indexOf(o) && o.clip === c2) { o.armed = true; o.seekTo(deck[c2]?.a ?? 0, true); } }, 50); } } seenK = k; players[k].el.classList.add('on'); }
+function onYT(k, st) {
+  const pl = players[k];
+  if (st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING) noCC(k);
+  if (st === YT.PlayerState.PLAYING) {
+    if (k !== wantK) { if (!pl.armed && k !== seenK) { if (ARMPAUSE) pl.pauseVideo(); pl.seekTo(deck[pl.clip]?.a ?? 0, true); pl.armed = true; } return; }
+    if (seenK !== k) swapToYT(k);
+    if (onPlaying) { const f = onPlaying; onPlaying = null; f(); }
+  }
+  if (st === YT.PlayerState.ENDED && k === wantK && k === seenK && !paused) autoNext();
+}
+function assignYT(c) {
+  const want = [c, c + 1, c + 2, c - 1].filter(w => w >= 0 && w < N);
+  const keep = seenK >= 0 && !(players[seenK].clip === c && players[seenK].dk === D.key) ? seenK : -1;
+  const used = new Set(keep >= 0 ? [keep] : []), map = {};
+  for (const w of want) { const k = players.findIndex((pl, j) => pl.clip === w && pl.dk === D.key && !used.has(j)); if (k >= 0) { used.add(k); map[w] = k; } }
+  for (const w of want) { if (map[w] !== undefined) continue; const k = players.findIndex((pl, j) => !used.has(j)); if (k < 0) continue; used.add(k); map[w] = k; }
+  return map;
+}
+// c を流す。動き出したら解決する Promise を返す
+let pendingShow = null;
+function showYT(c) {
+  if (!ytOk()) { pendingShow = c; return null; }
+  // 読み込まずに使い続けるのは、今の画面が読み込んである「同じ動画の切れ目なく続く並び」の中のクリップだけ
+  const sp = seenK >= 0 ? players[seenK] : null;
+  if (sp && sp.vid === deck[c].v && sp.dk === D.key && sp.runA !== undefined && deck[c].a >= sp.runA - .5 && deck[c].b <= sp.runB + .5 && sameRun(sp.clip, c)) {
+    wantK = seenK; sp.clip = c;
+    if (Math.abs(sp.getCurrentTime() - deck[c].a) > 1.5 || sp.getPlayerState() === YT.PlayerState.ENDED) sp.seekTo(deck[c].a, true);
+    sp.unMute(); sp.setVolume(100); sp.playVideo(); paused = false;
+    const map = assignYT(c); for (const w of [c + 1, c + 2, c - 1]) if (map[w] !== undefined && map[w] !== seenK && !sameRun(c, w)) preloadYT(map[w], w);
+    return Promise.resolve();
+  }
+  const map = assignYT(c); wantK = map[c]; const pl = players[wantK];
+  const ready = new Promise(res => { onPlaying = res; });
+  if (pl.clip === c && pl.dk === D.key && pl.armed) { pl.seekTo(deck[c].a, true); pl.unMute(); pl.setVolume(100); pl.playVideo(); }
+  else if (pl.clip === c && pl.dk === D.key) { pl.unMute(); pl.playVideo(); }
+  else { preloadYT(wantK, c); pl.unMute(); pl.setVolume(100); }
+  if (seenK < 0) swapToYT(wantK);
+  for (const w of [c + 1, c + 2, c - 1]) if (map[w] !== undefined && !sameRun(c, w)) preloadYT(map[w], w);
+  paused = false; return ready;
+}
+function togglePause() {
+  if (!YTON || seenK < 0) return; const pl = players[seenK]; paused ? pl.playVideo() : pl.pauseVideo(); paused = !paused;
+  // 一時停止の表示は YouTube に任せる
+}
+// 動画の操作: 2回たたくと5秒戻る・進む、字幕の帯をなぞると前後へ移動
+const curPl = () => (YTON && seenK >= 0 ? players[seenK] : null);
+function seekBy(dt, side) {
+  const pl = curPl(); if (!pl || !pl.getCurrentTime) return; const x = deck[cur];
+  const t = Math.max(Math.max(0, x.a - 60), Math.min(x.b - .4, pl.getCurrentTime() + dt)); pl.seekTo(t, true); if (paused) { pl.playVideo(); paused = false; }
+  const fb = $('seekfb'); fb.textContent = dt < 0 ? '‹‹ 5' : '5 ››'; fb.style.left = side < 0 ? '60px' : ''; fb.style.right = side < 0 ? '' : '60px';
+  fb.getAnimations().forEach(a => a.cancel()); fb.animate([{ opacity: 0, transform: `translateX(${side * -10}px)` }, { opacity: 1, transform: 'none', offset: .25 }, { opacity: 1, offset: .6 }, { opacity: 0, transform: `translateX(${side * 8}px)` }], { duration: 520, easing: 'ease-out' });
+  sfx('seek'); if (navigator.vibrate) navigator.vibrate(6);
+}
+let tapT = 0, tapSide = 0, tapTimer = 0;
+function onTap(lx) {
+  const now = performance.now(), side = lx < 379 ? -1 : 1;
+  if (now - tapT < 300 && side === tapSide) { clearTimeout(tapTimer); tapT = 0; seekBy(5 * side, side); return; }
+  tapT = now; tapSide = side; clearTimeout(tapTimer); tapTimer = setTimeout(togglePause, 300);
+}
+const fmt = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
+function seekAt(lx, final) {
+  const pl = curPl(); if (!pl) return; const x = deck[cur], k = Math.max(0, Math.min(1, (lx - 106) / 476)), t = x.a + k * (x.b - x.a);
+  pl.seekTo(t, !!final); $('cap').querySelector('.pg i').style.transform = `scaleX(${k})`; $('cap').querySelector('.no span').textContent = `${fmt(t - x.a)}/${fmt(x.b - x.a)}`;
+}
+// クリップが終わったら、読み取り機が次のカードを自動で差し込む
+function autoNext() { if (mode !== 'idle' || drag || cur >= N - 1) return; advance(); }
+// ---- 画面の読み込み: 走査線が上から下へ走り、刻線の絵が現れ、本物（ここでは静止画）へ溶ける
+let scanAnim = 0;
+async function load(i) {
+  if (YTON && seenK >= 0 && players[seenK].vid === deck[i].v && players[seenK].getCurrentTime && sameRun(players[seenK].clip, i) && Math.abs(players[seenK].getCurrentTime() - deck[i].a) < 2 && deck[i].a >= players[seenK].runA - .5 && deck[i].b <= players[seenK].runB + .5) {
+    showYT(i); caption(i, true); tabsOn(i); setTimeout(() => plateFor(i, true), 120); setTimeout(() => { face(i + 1); warm(i); }, 700); return;
+  }
+  const playing = YTON ? showYT(i) : null; let live = !playing; if (playing) { playing.then(() => { live = true; }); setTimeout(() => { live = true; }, 5000); }
+  const cv = $('scan'), x = cv.getContext('2d'), eng = await scanImg(i); cancelAnimationFrame(scanAnim);
+  const t0 = performance.now() + 110, D = 260, F = 170; let swapped = false, tHold = null;
+  cv.style.opacity = 1;
+  const step = now => {
+    const t = now - t0; if (t < 0) { scanAnim = requestAnimationFrame(step); return; } const k = Math.min(1, t / D), y = Math.round(427 * (1 - Math.pow(1 - k, 2)));
+    x.clearRect(0, 0, 759, 427); x.drawImage(eng, 0, 0, 759, y, 0, 0, 759, y);
+    if (k < 1) { const g = x.createLinearGradient(0, y - 18, 0, y + 2); g.addColorStop(0, 'rgba(151,178,193,0)'); g.addColorStop(1, 'rgba(234,231,212,.85)'); x.fillStyle = g; x.fillRect(0, y - 18, 759, 20); x.fillStyle = 'rgba(28,16,25,.35)'; x.fillRect(0, y + 2, 759, 427 - y); }
+    if (k >= 1 && !swapped) { swapped = true; if (!YTON) $('vid').src = stillOf(deck[i]); spillFrom(deck[i]); }
+    if (t > D && !live) { scanAnim = requestAnimationFrame(step); return; }   // 本物が動き出すまで、刻線の絵で覆っておく
+    if (t > D && tHold === null) tHold = t;
+    if (tHold !== null) cv.style.opacity = Math.max(0, 1 - (t - tHold) / F);
+    if (tHold === null || t < tHold + F) scanAnim = requestAnimationFrame(step); else { x.clearRect(0, 0, 759, 427); cv.style.opacity = 0; }
+  };
+  scanAnim = requestAnimationFrame(step);
+  $(YTON ? 'frame' : 'vid').animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(-9px) skewX(-3deg)', opacity: .8, offset: .25 }, { transform: 'translateX(6px)', opacity: .9, offset: .5 }, { transform: 'translateX(-3px)', opacity: .7, offset: .75 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 110, easing: 'steps(4)' });
+  $('mask').animate([{ opacity: 0 }, { opacity: .55, offset: .2 }, { opacity: .55, offset: .7 }, { opacity: 0 }], { duration: 560, delay: 90, easing: 'ease-out' });
+  $('glare').animate([{ opacity: 0, transform: 'translateX(0) skewX(-18deg)' }, { opacity: 1, transform: 'translateX(260%) skewX(-18deg)', offset: .5 }, { opacity: 0, transform: 'translateX(520%) skewX(-18deg)' }], { duration: 520, delay: 360, easing: 'cubic-bezier(.4,0,.2,1)' });
+  caption(i, true); tabsOn(i); startProgress(i); sfx('scan', { at: 110, gain: .7 }); setTimeout(() => plateFor(i, true), 180);
+  setTimeout(() => { scanImg(i + 1); face(i + 1); warm(i); }, 700);
+}
+// 差さった瞬間: 差し込み口のランプが走り、カードの表を光が横切る
+function seat(i) {
+  sfx('seat');
+  $('plate').querySelector('.led').animate([{ opacity: .35, transform: 'scaleX(.2)' }, { opacity: 1, transform: 'scaleX(1)', offset: .35 }, { opacity: .35, transform: 'scaleX(1)' }], { duration: 360, easing: 'ease-out' });
+  const e = els.get(i); if (e) e.querySelector('.sheen').animate([{ opacity: 0, transform: 'translateX(-120%)' }, { opacity: 1, transform: 'translateX(0)', offset: .5 }, { opacity: 0, transform: 'translateX(120%)' }], { duration: 420, easing: 'ease-out' });
+  $('reader').animate([{ transform: 'translateY(0)' }, { transform: 'translateY(1.5px)', offset: .3 }, { transform: 'translateY(0)' }], { duration: 120 });
+  $('beam').animate([{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(1)', opacity: 1, offset: .6 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 200, easing: 'cubic-bezier(.3,0,.2,1)' });
+  if (navigator.vibrate) navigator.vibrate(12);
+}
+
+// ---- シーズンの爪掛け
+let seasons = [];
+const TK0 = 22, TKH = 30;
+function buildScale() {
+  seasons = []; deck.forEach((d, i) => { if (!seasons.length || seasons.at(-1).s !== d.s) seasons.push({ s: d.s, first: i }); });
+  seasons.forEach((s, k) => { s.count = (seasons[k + 1]?.first ?? N) - s.first; });
+  $('scale').querySelectorAll('.tk').forEach(t => t.remove());
+  const h = Math.min(TKH, 390 / Math.max(1, seasons.length));
+  seasons.forEach((s, k) => { const t = document.createElement('div'); t.className = 'tk'; const f0 = deck[s.first], sl = String(f0.sl ?? s.s.slice(1)); t.innerHTML = sl.includes('/') ? `<b class="ym"><i>'${sl.split('/')[0]}</i>${sl.split('/')[1]}</b>` : `<b>${sl}</b>`; t.style.top = `${TK0 + k * h}px`; t.style.height = `${h}px`; t.dataset.first = s.first; $('scale').appendChild(t); });
+  buildScale.h = h;
+}
+// 針: シーズンの目盛りの中で、そのシーズンの何本目かの位置まで進む。液晶の数字も同じ時に
+let progAnim = null;
+let softAt = -1;
+function progLoop() { if (YTON && seenK >= 0 && players[seenK].getCurrentTime && deck[cur]) {
+    const tn = players[seenK].getCurrentTime(); if (mode === 'idle' && !drag && !paused && !navBusy && softAt !== cur && cont(cur, cur + 1) && tn >= deck[cur].b - .08 && tn < deck[cur].b + 2) { softAt = cur; advance(); } const x = deck[cur], t = (players[seenK].getCurrentTime() - x.a) / Math.max(1, x.b - x.a), k = Math.max(0, Math.min(1, t));
+    $('plate').querySelector('.prog').style.transform = `scaleX(${k})`; if (mode !== 'seek') $('cap').querySelector('.pg i').style.transform = `scaleX(${k})`; } requestAnimationFrame(progLoop); }
+if (YTON) requestAnimationFrame(progLoop);
+function startProgress(i) { if (!deck[i] || YTON) return; if (progAnim) progAnim.cancel(); progAnim = $('plate').querySelector('.prog').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(3, deck[i].dur) * 1000, easing: 'linear', fill: 'forwards' });
+  if (progAnim2) progAnim2.cancel(); progAnim2 = $('cap').querySelector('.pg i').animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: Math.max(3, deck[i].dur) * 1000, easing: 'linear', fill: 'forwards' }); }
+let progAnim2 = null;
+let plateKey = null;
+async function plateFor(i, animate) {
+  if (D.key !== 'all' || !deck[i]) return; const lg = legOf(deck[i]), key = lg && lg.img ? deck[i].lk : '_apex'; if (key === plateKey) return; plateKey = key;
+  const pic = $('plate').querySelector('.pic'), dn = $('plate').querySelector('.dn');
+  const cv = key === '_apex' ? await allMark(40, 40, ['#04070a', '#183039', '#6aa6bb', '#d8f2fa'], false) : engrave(await loadImg('assets/' + lg.img), 80, 80, { lines: 3, ramp: ['#04070a', '#183039', '#6aa6bb', '#d8f2fa'] });
+  const name = key === '_apex' ? 'ALL CLIPS' : lg.name;
+  if (!animate) { pic.innerHTML = ''; pic.appendChild(cv); dn.textContent = name; fitDn(); return; }
+  pic.animate([{ transform: 'none', filter: 'brightness(1)' }, { transform: 'translateX(-3px) skewX(-8deg)', filter: 'brightness(2.2)', offset: .3 }, { transform: 'translateX(2px)', filter: 'brightness(.4)', offset: .55 }, { transform: 'none', filter: 'brightness(1)' }], { duration: 260, easing: 'steps(5)' });
+  setTimeout(() => { pic.innerHTML = ''; pic.appendChild(cv); dn.textContent = name; fitDn(); dn.animate([{ opacity: 0, transform: 'translateY(3px)' }, { opacity: 1, transform: 'none' }], { duration: 180 }); }, 110);
+}
+function fitDn() { const nm = $('plate').querySelector('.dn'); nm.style.fontSize = ''; let f = 15; while (nm.scrollWidth > 58 && f > 9) { f -= .5; nm.style.fontSize = f + 'px'; } }
+function tabsOn(i, live) {
+  const k = seasons.findIndex(s => i >= s.first && i < s.first + s.count), sz = seasons[k];
+  [...$('scale').querySelectorAll('.tk')].forEach((t, j) => t.classList.toggle('on', j === k));
+  const H = buildScale.h || TKH, y = TK0 + k * H + (sz.count > 1 ? (i - sz.first) / (sz.count - 1) : .5) * (H - 6) + 2;
+  $('scale').querySelector('.needle').style.transform = `translateY(${y.toFixed(1)}px)`;
+  $('plate').querySelector('.dpos').innerHTML = `${String(N - i).padStart(3, '0')}<small>/${String(N).padStart(3, '0')}</small>`;
+}
+
+// ---- 操作
+let drag = null, popY = 0, anim = 0;
+const SC = () => SCL;
+function spring(from, to, onStep, onEnd, { k = 0.0009, damp = 0.985 } = {}) {
+  cancelAnimationFrame(anim); let x = from, v = 0, last = performance.now();
+  const step = now => { const dt = Math.min(32, now - last); last = now; v += (to - x) * k * dt; v *= Math.pow(damp, dt); x += v * dt; onStep(x);
+    if (Math.abs(to - x) < .002 && Math.abs(v) < .0005) { onStep(to); onEnd && onEnd(); } else anim = requestAnimationFrame(step); };
+  anim = requestAnimationFrame(step);
+}
+function finishNow() { cancelAnimationFrame(anim); if (mode === 'swipe' && p > .5) { cur += 1; } if (mode === 'swipe' && p < -.5) { cur -= 1; } p = 0; mode = 'idle'; place(); }
+addEventListener('pointerdown', e => {
+  if (navBusy) return;
+  const lx = (e.clientX - OXv()) / SCL, ly = (e.clientY - OYv()) / SCL;
+  if (lx >= 759 && lx < 779 && cab.style.display === 'none') { finishNow(); mode = 'jumpdrag'; cheap = true; drag = { kind: 'scale', last: cur, x0: lx, y0: ly, moved: 0 }; dialShow(true); scaleTo(ly); return; }
+  finishNow();
+  if (YTON && seenK >= 0 && ly >= 396 && lx >= 90 && lx <= 600) { mode = 'seek'; drag = { kind: 'seek' }; $('cap').classList.add('seeking'); seekAt(lx, false); return; }
+  if (lx >= 759) { mode = 'scrub'; ro = cur; drag = { y0: ly, ro0: cur, hist: [[ly, performance.now()]], last: cur }; tiltFrom(lx, ly); }
+  else { mode = 'swipe'; drag = { y0: ly, hist: [[ly, performance.now()]], t0: performance.now(), moved: 0 }; }
+  place();
+});
+addEventListener('pointermove', e => {
+  if (drag && drag.kind === 'scale') { const ly = (e.clientY - OYv()) / SCL; drag.moved = Math.max(drag.moved, Math.abs(ly - drag.y0)); scaleTo(ly); return; }
+  if (drag && drag.kind === 'seek') { seekAt((e.clientX - OXv()) / SCL, false); return; }
+  if (!drag) return; const ly = (e.clientY - OYv()) / SCL; drag.hist.push([ly, performance.now()]); if (drag.hist.length > 5) drag.hist.shift();
+  if (mode === 'scrub') { const hv = drag.hist.length > 1 ? (drag.hist.at(-2)[0] - ly) / Math.max(8, performance.now() - drag.hist.at(-2)[1]) : 0; tiltFrom((e.clientX - OXv()) / SCL, ly, hv); cheap = Math.abs(hv) / PITCH > .012; ro = Math.max(0, Math.min(N - 1, drag.ro0 + (drag.y0 - ly) / PITCH)); const s = Math.round(ro); if (s !== drag.last) { drag.last = s; pop(); tabsOn(s); sfx('tick', { gain: Math.max(.35, 1 - Math.abs(hv) * .6), rate: .95 + Math.random() * .1 }); if (navigator.vibrate) navigator.vibrate(4); } }
+  else { drag.moved = Math.max(drag.moved, Math.abs(drag.y0 - ly)); p = Math.max(cur > 0 ? -1.05 : 0, (drag.y0 - ly) / 236); }
+  place();
+});
+function pop() { const t0 = performance.now(); const st = now => { const t = Math.min(1, (now - t0) / 130); popY = (1 - t) * 26 * (1 - t) - Math.sin(t * Math.PI) * 3; place(); if (t < 1) requestAnimationFrame(st); }; requestAnimationFrame(st); }
+addEventListener('pointerup', e => {
+  if (drag && drag.kind === 'scale') { const d = drag; drag = null; dialShow(false); if (d.moved < 6) { const k = scaleSeason((e.clientY - OYv()) / SCL); jump(seasons[k].first); return; } settleTo(Math.round(ro)); return; }
+  if (drag && drag.kind === 'seek') { seekAt((e.clientX - OXv()) / SCL, true); drag = null; mode = 'idle'; $('cap').classList.remove('seeking'); setTimeout(() => { $('cap').querySelector('.no span').textContent = String(clipOf(cur).no).padStart(4, '0'); }, 900); if (paused) togglePause(); return; }
+  if (!drag) return; tiltTo(0, 0); const d = drag; drag = null; const ly = (e.clientY - OYv()) / SCL, [ya, ta] = d.hist[0], v = (ya - ly) / Math.max(8, performance.now() - ta);
+  if (mode === 'scrub') {
+    // 勢いで送り、近いカードに吸い付いて、差して読み込む
+    let vel = v / PITCH, last = performance.now();
+    const coast = now => { const dt = Math.min(32, now - last); last = now; cheap = Math.abs(vel) > .008; ro = Math.max(0, Math.min(N - 1, ro + vel * dt)); vel *= Math.pow(.993, dt); const s = Math.round(ro); if (s !== d.last) { d.last = s; pop(); tabsOn(s); sfx('tick', { gain: .55, rate: .95 + Math.random() * .1 }); if (navigator.vibrate) navigator.vibrate(4); } place();
+      if (Math.abs(vel) > .002) anim = requestAnimationFrame(coast); else { const s2 = Math.round(ro); cheap = false; spring(ro, s2, x => { ro = x; place(); }, () => { const changed = s2 !== cur; cur = s2; mode = 'idle'; place(); if (changed) { seat(cur); load(cur); } }); } };
+    anim = requestAnimationFrame(coast);
+  } else {
+    if (d.moved < 8 && performance.now() - d.t0 < 350) { p = 0; mode = 'idle'; place(); onTap((e.clientX - OXv()) / SCL); return; }   // 画面のタップ: 一時停止と再開
+    if (p < 0) {
+      const back = cur > 0 && (p < -.35 || v < -.3);
+      spring(p, back ? -1 : 0, x => { p = x; place(); }, () => { if (back) { cur -= 1; } p = 0; mode = 'idle'; place(); }, { k: .0016, damp: .982 });
+      if (back) { const target = cur - 1; const waitSeat = () => { if (p < -.97) { seat(target); load(target); } else requestAnimationFrame(waitSeat); }; requestAnimationFrame(waitSeat); scanImg(target); }
+      return;
+    }
+    const go = cur < N - 1 && (p > .35 || v > .3);
+    spring(p, go ? 1 : 0, x => { p = x; place(); }, () => { if (go) { cur += 1; p = 0; mode = 'idle'; place(); } else { p = 0; mode = 'idle'; place(); } }, { k: .0016, damp: .982 });
+    if (go) { const waitSeat = () => { if (p > .97) { seat(cur + 1); load(cur + 1); } else anim2 = requestAnimationFrame(waitSeat); }; let anim2 = requestAnimationFrame(waitSeat); scanImg(cur + 1); }
+  }
+});
+addEventListener('pointercancel', () => { drag = null; finishNow(); });
+// 目盛りの縦の位置 → シーズンと、その中の何本目か
+function scaleSeason(ly) { const H = buildScale.h || TKH; return Math.max(0, Math.min(seasons.length - 1, Math.floor((ly - TK0) / H))); }
+function scaleIndex(ly) { const H = buildScale.h || TKH, k = scaleSeason(ly), sz = seasons[k], f = Math.max(0, Math.min(1, (ly - TK0 - k * H) / H)); return sz.first + Math.min(sz.count - 1, Math.floor(f * sz.count)); }
+let lastFlip = 0;
+function flip(i, hard) { const now = performance.now(); if (now - lastFlip < 45) return; lastFlip = now; const e = els.get(i); if (!e) return; const base = e.style.transform;
+  e.animate([{ transform: base + ' rotateX(-82deg)', filter: 'brightness(.55)' }, { transform: base + ' rotateX(6deg)', filter: 'brightness(1.1)', offset: .7 }, { transform: base, filter: 'brightness(1)' }], { duration: hard ? 150 : 110, easing: 'cubic-bezier(.2,.8,.2,1)' }); }
+function dialShow(on, ly) { const d = $('dial'); d.getAnimations().forEach(a => a.cancel()); if (on) { d.style.opacity = 1; d.style.transform = 'none'; d.animate([{ opacity: 0, transform: 'translateX(30px)' }, { opacity: 1, transform: 'none' }], { duration: 160, easing: 'cubic-bezier(.2,.9,.3,1)' }); } else { d.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished.then(() => { d.style.opacity = 0; }); } }
+function dialAt(i, ly) { const d = $('dial'), c = clipOf(i); d.style.top = `${Math.max(16, Math.min(300, ly - 56)).toFixed(1)}px`;
+  d.querySelector('.big').innerHTML = `<i>${c.sp}</i>${c.sn}`; d.querySelector('.date').textContent = c.d; d.querySelector('.cnt').textContent = `${String(N - i).padStart(4, '0')}/${N}`;
+  d.querySelector('.bar i').style.width = `${((N - i) / N * 100).toFixed(1)}%`; }
+function scaleTo(ly) { const i = scaleIndex(ly); ro = i; mode = 'jumpdrag'; place(); dialAt(i, ly); if (i !== drag.last) { flip(i, deck[i].s !== deck[drag.last].s); const crossed = deck[i].s !== deck[drag.last].s; drag.last = i; tabsOn(i); sfx('tick', { gain: crossed ? .9 : .35, rate: crossed ? .8 : 1.1 }); if (crossed && navigator.vibrate) navigator.vibrate(8); } }
+// 指を離したら、その位置へ: 軽いカードのまま近くまで送り、最後だけ本物の絵で吸い付く
+function settleTo(i) { cheap = false; mode = 'scrub'; spring(ro, i, x => { ro = x; place(); }, () => { const changed = i !== cur; cur = i; mode = 'idle'; place(); if (changed) { seat(cur); load(cur); } }, { k: .0012, damp: .982 }); }
+// 目盛りを触ったとき: 途中は軽いカードで速く送る（0.38秒）
+function jump(i) { mode = 'scrub'; cheap = true; const from = cur, t0 = performance.now(), D = 380; cancelAnimationFrame(anim); let last = cur;
+  const step = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); ro = from + (i - from) * e; const r = Math.round(ro); if (r !== last) { last = r; tabsOn(r); place(); flip(r, false); if (Math.abs(r - i) < 6 || r % 3 === 0) sfx('tick', { gain: .35, rate: 1.15 }); } place();
+    if (k < 1) anim = requestAnimationFrame(step); else { cheap = false; cur = i; mode = 'idle'; place(); seat(cur); load(cur); } };
+  anim = requestAnimationFrame(step); }
+// 次へ送る（キーの↑と、クリップが終わったときの自動）
+function advance() { if (cur >= N - 1) return; finishNow(); mode = 'swipe'; const nx = cur + 1; spring(0, 1, x => { p = x; place(); }, () => { cur = nx; p = 0; mode = 'idle'; place(); }, { k: .0016, damp: .982 }); setTimeout(() => { seat(nx); load(nx); }, 240); }
+function retreat() { if (cur <= 0) return; finishNow(); mode = 'swipe'; const pv = cur - 1; spring(0, -1, x => { p = x; place(); }, () => { cur = pv; p = 0; mode = 'idle'; place(); }, { k: .0016, damp: .982 }); setTimeout(() => { seat(pv); load(pv); }, 240); }
+addEventListener('keydown', e => { if (e.key === 'ArrowDown') retreat(); if (e.key === 'ArrowUp') advance(); if (e.key === ' ') togglePause(); });
+
+// ---- 電源（開始の画面）
+if ((navigator.webdriver && !q.has('power')) || q.has('nopower')) { $('power').remove(); setTimeout(() => startProgress(cur), 0); }
+else { $('power').addEventListener('pointerdown', e => e.stopPropagation()); }
+if ($('power')) $('power').addEventListener('click', e => { e.stopPropagation(); goFull(); if (AC) AC.resume().then(() => sfx('power_on')); const pw = $('power');
+  pw.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 120, fill: 'forwards' }).finished.then(() => pw.remove());
+  $('screen').animate([{ transform: 'scaleY(.01)', filter: 'brightness(3)' }, { transform: 'scaleY(1)', filter: 'brightness(1.4)', offset: .6 }, { transform: 'scaleY(1)', filter: 'brightness(1)' }], { duration: 380, delay: 120, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  $('plate').querySelector('.led').animate([{ opacity: 0 }, { opacity: 1 }, { opacity: .28 }], { duration: 600, delay: 200 });
+  startProgress(cur); }, true);
+// ---- 起動
+let SCL = 1;
+function fit() { window.fitNow(); SCL = window.SCLX || 1; }
+const OXv = () => window.OX || 0, OYv = () => window.OY || 0;
+addEventListener('resize', fit); fit();
+setInterval(() => { if (mode !== 'idle' || p > 0 || cab.style.display !== 'none') return; const e = els.get(cur); if (e) e.querySelector('.sheen').animate([{ opacity: 0, transform: 'translateX(-120%)' }, { opacity: .32, transform: 'translateX(0)', offset: .5 }, { opacity: 0, transform: 'translateX(120%)' }], { duration: 1000, easing: 'ease-in-out' }); }, 7000);
+// 「すべて」の印: Apex の三角の A（外の三角から、内の三角と下の切れ込みを抜く）。刻線の刷り
+async function allMark(w, h, ramp, red = true) { return GAME === 'apex' ? apexMark(w, h, ramp, red) : dlMark(w, h, ramp, red); }
+// Deadlock の「すべて」の印: 細長い書体の DEADLOCK を、刻線の刷りで
+async function dlMark(w, h, ramp = ['#0b0c0e', '#2a3038', '#c9d2dc', '#eef3f7'], red = true) {
+  const cv = document.createElement('canvas'); cv.width = w * 2; cv.height = h * 2; const x = cv.getContext('2d'); x.scale(2, 2);
+  const g = x.createRadialGradient(w * .5, h * .55, 4, w * .5, h * .55, w * .75); g.addColorStop(0, ramp[1]); g.addColorStop(1, ramp[0]); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.save(); x.translate(w / 2, h / 2); x.rotate(-Math.PI / 2 * (h > w * 1.4 ? 1 : 0)); const L = h > w * 1.4 ? h : w; let f = L * .2; x.font = `700 ${f}px "Antonio"`; const WORD = GAME === 'other' ? 'OTHER' : 'DEADLOCK'; while (x.measureText(WORD).width > L * .82 && f > 6) { f -= 1; x.font = `700 ${f}px "Antonio"`; }
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.shadowColor = red ? (GAME === 'other' ? 'rgba(63,180,208,.6)' : 'rgba(214,170,90,.55)') : 'rgba(191,227,242,.5)'; x.shadowBlur = 8; x.fillStyle = ramp[3]; x.fillText(WORD, 0, 0); x.restore();
+  x.fillStyle = 'rgba(0,0,0,.32)'; for (let y = 0; y < h; y += 3) x.fillRect(0, y + 2, w, 1);
+  return cv;
+}
+async function apexMark(w, h, ramp = ['#0b0c0e', '#2a3038', '#c9d2dc', '#eef3f7'], red = true) {
+  const cv = document.createElement('canvas'); cv.width = w * 2; cv.height = h * 2; const x = cv.getContext('2d'); x.scale(2, 2);
+  const g = x.createRadialGradient(w * .5, h * .55, 4, w * .5, h * .55, w * .75); g.addColorStop(0, ramp[1]); g.addColorStop(1, ramp[0]); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  const s = Math.min(w, h) * .72, cx = w / 2, by = h * .5 + s * .42, ty = by - s * .9;
+  const m = document.createElement('canvas'); m.width = w * 2; m.height = h * 2; const k = m.getContext('2d'); k.scale(2, 2);
+  k.fillStyle = '#fff'; k.beginPath(); k.moveTo(cx, ty); k.lineTo(cx + s * .55, by); k.lineTo(cx - s * .55, by); k.closePath(); k.fill();
+  k.globalCompositeOperation = 'destination-out';
+  k.beginPath(); k.moveTo(cx, ty + s * .3); k.lineTo(cx + s * .3, by - s * .08); k.lineTo(cx - s * .3, by - s * .08); k.closePath(); k.fill();   // 内の三角
+  k.beginPath(); k.moveTo(cx - s * .09, by + 1); k.lineTo(cx, by - s * .2); k.lineTo(cx + s * .09, by + 1); k.closePath(); k.fill();             // 下の切れ込み
+  k.globalCompositeOperation = 'source-in'; const fg = k.createLinearGradient(0, ty, 0, by); fg.addColorStop(0, ramp[3]); fg.addColorStop(1, ramp[2]); k.fillStyle = fg; k.fillRect(0, 0, w, h);
+  x.save(); x.shadowColor = red ? 'rgba(226,55,31,.55)' : 'rgba(191,227,242,.5)'; x.shadowBlur = 8; x.drawImage(m, 0, 0, w, h); x.restore();
+  x.fillStyle = 'rgba(0,0,0,.32)'; for (let y = 0; y < h; y += 3) x.fillRect(0, y + 2, w, 1);
+  return cv;
+}
+// 全レジェンドの顔を格子に並べた絵（クリップの多い順）。刻線の刷り
+async function mosaic(w, h, cols, ramp) {
+  const keys = G.decks.filter(d => d.img).map(d => d.img), rows = Math.ceil(Math.min(keys.length, cols * Math.ceil(h / (w / cols))) / cols), cw = w / cols, ch = h / rows;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d');
+  const imgs = await Promise.all(keys.slice(0, cols * rows).map(k => loadImg('assets/' + k)));
+  imgs.forEach((im, k) => { if (!im) return; const t = engrave(im, Math.ceil(cw), Math.ceil(ch), { lines: 3, ...(ramp ? { ramp } : {}) }); x.drawImage(t, (k % cols) * cw, Math.floor(k / cols) * ch); });
+  x.fillStyle = 'rgba(4,7,10,.55)'; for (let c = 1; c < cols; c++) x.fillRect(Math.round(c * cw) - .5, 0, 1, h); for (let r = 1; r < rows; r++) x.fillRect(0, Math.round(r * ch) - .5, w, 1);
+  return cv;
+}
+// ---- デッキを読み取り機に入れる
+let pregen = 0;
+// 今の位置の前後だけ、カードの絵を作り置きする。遠いものは捨てる（2,000本を超えるデッキでもメモリを使い切らない）
+function warm(c) {
+  const tok = ++pregen;
+  for (const k of [...faces.keys()]) if (k < c - 30 || k > c + 60) faces.delete(k);
+  for (const k of [...scans.keys()]) if (k < c - 3 || k > c + 3) scans.delete(k);
+  // 指で触っている間・送っている間・遷移の間は止める。手が空いた時だけ1枚ずつ描く
+  const idle = () => new Promise(r => { const tick = () => { if (tok !== pregen) return r(false); if (mode === 'idle' && !drag && !navBusy && p === 0) { (window.requestIdleCallback || setTimeout)(() => r(true), { timeout: 300 }); } else setTimeout(tick, 150); }; tick(); });
+  (async () => { const order = []; for (let d = 1; d <= 16; d++) { order.push(c + d); if (d <= 6) order.push(c - d); }
+    for (const i of order) { if (i < 0 || i >= N || faces.has(i)) continue; if (!(await idle())) return; await face(i); } })();
+}
+const TPLS = {};
+function applyTemplate() { const g = GAME, T = THEMES[g]; if (!TPLS[g]) TPLS[g] = drawFace2({ tpl: true, game: g, legend: '', no: 0, of: 0, d: '', dur: 0, t: '', kind: g === 'deadlock' ? 'hero / ヒーロー' : g === 'other' ? 'game / ゲーム' : 'legend / レジェンド' }, 400).toDataURL('image/png');
+  const r = document.body.style; r.setProperty('--tpl', `url(${TPLS[g]})`); r.setProperty('--tpl-num', T.num); r.setProperty('--tpl-numsub', T.numSub); r.setProperty('--tpl-tag', T.tagBg); r.setProperty('--tpl-tagfg', T.tagFg); r.setProperty('--tpl-pre', T.tagPre); r.setProperty('--tpl-prefg', T.tagPreFg); r.setProperty('--tpl-ink', T.ink); }
+async function loadDeck(key) {
+  applyTemplate();
+  document.body.classList.toggle('g-apex', GAME === 'apex'); document.body.classList.toggle('g-deadlock', GAME === 'deadlock'); document.body.classList.toggle('g-other', GAME === 'other');
+  D = G.decks.find(d => d.key === key) || G.decks[0]; deck = D.clips; N = deck.length; LEGEND = D.name;
+  HOLDER = D.img ? await loadImg('assets/' + D.img) : null;
+  faces.clear(); scans.clear(); for (const [, e] of els) e.remove(); els.clear(); cancelAnimationFrame(anim);
+  players.forEach(pl => { pl.clip = -1; pl.dk = ''; pl.armed = false; if (pl.el && !pl.el.classList.contains('on') && pl.pauseVideo) pl.pauseVideo(); });
+  cur = (q.has('start') && !loadDeck.done) ? +q.get('start') : 0; loadDeck.done = true; p = 0; ro = cur; mode = 'idle';
+  const nm = $('plate').querySelector('.dn'); nm.textContent = LEGEND; nm.style.fontSize = ''; let f = 15; while (nm.scrollWidth > 58 && f > 9) { f -= .5; nm.style.fontSize = f + 'px'; }
+  plateKey = null; const icon = $('plate').querySelector('.pic'); icon.innerHTML = ''; if (D.key === 'all') icon.appendChild(await allMark(40, 40, ['#04070a', '#183039', '#6aa6bb', '#d8f2fa'], false)); else if (HOLDER) icon.appendChild(engrave(HOLDER, 80, 80, { lines: 3, ramp: ['#04070a', '#183039', '#6aa6bb', '#d8f2fa'] }));
+  buildScale(); tabsOn(cur); plateFor(cur, false); $('vid').src = stillOf(deck[cur]); spillFrom(deck[cur]); caption(cur, false);
+  await Promise.all([0, 1, 2, 3, 4].filter(i => i < N).map(face)); await scanImg(0); if (N > 1) scanImg(1);
+  place(); startProgress(cur);
+  warm(cur);
+}
+
+// ---- 保管棚（デッキを選ぶ画面）: 壁に取り付けたケースが2段で並び、横になぞって送る
+const cab = $('cab'), track = cab.querySelector('.track');
+cab.querySelector('.total span').textContent = DECKS.total;
+const GN = { apex: 'APEX', deadlock: 'DEADLOCK', other: 'OTHER', monster_hunter: 'MH', valorant: 'VALO', satisfactory: 'SAT' };
+const GOF = g => g === 'deadlock' ? DECKS.deadlock : g === 'other' ? DECKS.other : DECKS;   // ゲームの札 → デッキの組
+const GCOUNT = () => ({ apex: DECKS.games.apex || 0, deadlock: DECKS.games.deadlock || 0, other: Object.entries(DECKS.games).filter(([k]) => k !== 'apex' && k !== 'deadlock').reduce((a, [, n]) => a + n, 0) });
+const PLAYABLE = { apex: true, deadlock: true, other: true };
+function drawGames() { cab.querySelector('.games').innerHTML = Object.entries(GCOUNT()).filter(([k]) => PLAYABLE[k]).sort((a, b) => Object.keys(PLAYABLE).indexOf(a[0]) - Object.keys(PLAYABLE).indexOf(b[0])).map(([k, n]) => `<span class="gm${k === GAME ? ' on' : ''}${PLAYABLE[k] ? '' : ' off'}" data-game="${k}"><b>${GN[k] || k}</b><i>${n}</i></span>`).join(''); }
+drawGames();
+const CW2 = 124, CH2 = 168, GAPX = 140;
+// 横一列に、背の高い縦長のケースを同じ幅で立てる（本数は液晶の数字とレア度の帯で）
+const caseW = () => 116, CH1 = 340;
+const ROWS = [14], GAP = 14, SHELF_X = 0;
+let TRACK_W = 0;
+function buildCase(d, k, w, h, parent, tall = false) {
+  const e = document.createElement('div'), n = d.clips.length;
+  const tier = d.key === 'all' ? 't-all' : d.key === 'unknown' ? 'unk' : n >= 100 ? 't-legend' : n >= 50 ? 't-epic' : n >= 20 ? 't-rare' : 't-common';
+  e.className = 'case ' + tier; e.dataset.key = d.key; e.style.width = `${w}px`; e.style.height = `${h}px`;
+  const ww = w - 16, wh = d.key === 'all' ? h - 120 : tall ? h - 96 : 92;
+  e.innerHTML = `<div class="peek"></div><div class="box"><div class="tier"></div><div class="win live" style="width:${ww}px;height:${wh}px"></div><div class="nm2" style="top:${wh + 14}px">${d.name}</div><div class="jp" style="top:${wh + (d.key === "all" ? 54 : 38)}px">${d.jp}</div><div class="cnt"><span>${String(n).padStart(3, '0')}</span></div></div>`;
+  parent.appendChild(e);
+  const win = e.querySelector('.win');
+  if (d.key === 'all') allMark(ww, wh).then(cv => { cv.style.width = ww + 'px'; cv.style.height = wh + 'px'; win.appendChild(cv); });
+  else if (d.img) loadImg('assets/' + d.img).then(img => { if (!img) return; let src = img; if (tall) { const c = document.createElement('canvas'), sw = Math.min(img.width, img.height * ww / wh); c.width = sw; c.height = img.height; c.getContext('2d').drawImage(img, (img.width - sw) / 2, 0, sw, img.height, 0, 0, sw, img.height); src = c; } const cv = engrave(src, ww, wh, { lines: 3 }); cv.style.width = ww + 'px'; cv.style.height = wh + 'px'; win.appendChild(cv); });
+  e.style.setProperty('--dl', `${-(k * 1.3) % 7}s`);
+  const nm = e.querySelector('.nm2'); requestAnimationFrame(() => { let f = d.key === 'all' ? 34 : 20; nm.style.fontSize = f + 'px'; while (nm.scrollWidth > ww && f > 11) { f--; nm.style.fontSize = f + 'px'; } });
+  return e;
+}
+function buildShelf() {
+  track.innerHTML = ''; cab.querySelector('.heroslot').innerHTML = '';
+  const legs = G.decks.filter(d => d.key !== 'all' && d.key !== 'unknown'), unk = G.decks.find(d => d.key === 'unknown');
+  const ordered = unk ? [...legs, unk] : legs; let x = 18;
+  ordered.forEach((d, k) => { const w = caseW(); const e = buildCase(d, k + 1, w, CH1, track, true); e.style.left = `${x}px`; e.style.top = `${ROWS[0]}px`; x += w + GAP; });
+  const allD = G.decks.find(d => d.key === 'all');
+  const hero = buildCase(allD, 0, 214, 354, cab.querySelector('.heroslot')); hero.classList.add('hero'); hero.style.left = '0px'; hero.style.top = '0px';
+  { const latest = allD.clips[0]; const l = document.createElement('div'); l.className = 'latest'; l.innerHTML = `<i>LATEST</i>${latest.d.replace(/-/g, '.')}`; hero.querySelector('.box').appendChild(l); }
+  TRACK_W = x + 6;
+  ROWS.forEach(y => { const b = document.createElement('div'); b.className = 'board'; b.style.top = `${y + CH1}px`; b.style.width = `${TRACK_W + 400}px`; track.prepend(b); });
+}
+buildShelf();
+// ゲームを切り替える: 棚がいったん下へ沈み、新しいケースが下からせり上がる
+async function switchGame(g) {
+  if (g === GAME || !PLAYABLE[g] || navBusy) return; navBusy = true; sfx('select', { gain: .7 });
+  const parts = [...cab.querySelectorAll('.case')];
+  await Promise.all(parts.map((c, k) => c.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(60px)', opacity: 0 }], { duration: 220, delay: Math.min(8, k) * 18, easing: 'cubic-bezier(.5,0,.8,.3)', fill: 'forwards' }).finished));
+  GAME = g; G = GOF(g); drawGames(); buildShelf(); setTx(0);
+  [...cab.querySelectorAll('.case')].forEach((c, k) => { c.animate([{ transform: 'translateY(70px)', opacity: 0 }, { transform: 'translateY(-4px)', opacity: 1, offset: .75 }, { transform: 'none', opacity: 1 }], { duration: 320, delay: Math.min(8, k) * 26, easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'backwards' }); if (k < 8) sfx('deal', { at: k * 26, gain: .35 }); });
+  await loadDeck('all'); navBusy = false;
+}
+cab.querySelector('.games').addEventListener('pointerdown', e => { const t = e.target.closest('.gm'); if (!t) return; e.stopPropagation(); switchGame(t.dataset.game); });
+{ const dv = document.createElement('div'); dv.className = 'divider'; cab.appendChild(dv); } let tx = 0, cdrag = null, canim = 0;
+const clampX = x => Math.max(Math.min(0, (924 - 240) - TRACK_W - 12), Math.min(0, x));
+function setTx(x) { tx = x; track.style.transform = `translateX(${tx.toFixed(1)}px)`; }
+cab.addEventListener('pointerdown', e => { e.stopPropagation(); if (navBusy) return; cancelAnimationFrame(canim); cdrag = { x0: e.clientX, tx0: tx, hist: [[e.clientX, performance.now()]], moved: 0, target: e.target.closest('.case') }; if (cdrag.target) cdrag.target.classList.add('press'); });
+cab.addEventListener('pointermove', e => { if (!cdrag) return; e.stopPropagation(); const dx = (e.clientX - cdrag.x0) / SCL; cdrag.moved = Math.max(cdrag.moved, Math.abs(dx)); cdrag.hist.push([e.clientX, performance.now()]); if (cdrag.hist.length > 5) cdrag.hist.shift(); let x = cdrag.tx0 + dx; if (x > 0) x *= .35; const mn = clampX(-1e9); if (x < mn) x = mn + (x - mn) * .35; setTx(x); const col = Math.round(-x / GAPX); if (col !== cdrag.col) { if (cdrag.col !== undefined) sfx('tick', { gain: .4, rate: .8 }); cdrag.col = col; } if (cdrag.moved > 8 && cdrag.target) cdrag.target.classList.remove('press'); });
+cab.addEventListener('pointerup', e => {
+  if (!cdrag) return; e.stopPropagation(); const d = cdrag; cdrag = null; if (d.target) d.target.classList.remove('press');
+  if (d.moved < 8 && d.target) { selectDeck(d.target); return; }
+  let v = (e.clientX - d.hist[0][0]) / SCL / Math.max(8, performance.now() - d.hist[0][1]), last = performance.now();
+  const step = now => { const dt = Math.min(32, now - last); last = now; let x = tx + v * dt; v *= Math.pow(.994, dt); const c = clampX(x); if (c !== x) { x += (c - x) * .2; v *= .8; } setTx(x); if (Math.abs(v) > .01 || Math.abs(clampX(tx) - tx) > .5) canim = requestAnimationFrame(step); else setTx(clampX(tx)); };
+  canim = requestAnimationFrame(step);
+});
+// デッキを選ぶ: ケースが持ち上がり、読み取り機の棚へ飛んで収まり、画面に電源が入る
+// ---- 音（効果音の担当が作った assets/sfx。無ければ鳴らさない）
+const AC = window.AudioContext ? new AudioContext() : null; const SFX = {};
+fetch('assets/sfx/manifest.json').then(r => r.ok ? r.json() : {}).then(m => Object.entries(m).forEach(([k, v]) => fetch('assets/sfx/' + v.file).then(r => r.arrayBuffer()).then(b => AC && AC.decodeAudioData(b)).then(buf => { if (buf) SFX[k] = { buf, gain: v.gain ?? .6 }; }).catch(() => {}))).catch(() => {});
+addEventListener('click', () => AC && AC.state !== 'running' && AC.resume(), true);
+function sfx(name, { gain = 1, rate = 1, at = 0 } = {}) { const x = SFX[name]; if (!x || !AC || AC.state !== 'running') return; const src = AC.createBufferSource(), g = AC.createGain(); src.buffer = x.buf; src.playbackRate.value = rate; g.gain.value = x.gain * gain; src.connect(g).connect(AC.destination); src.start(AC.currentTime + at / 1000); }
+
+// ---- 行き来の遷移
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let navBusy = false;
+const appXY = el => { const r = el.getBoundingClientRect(); return { x: (r.left - OXv()) / SCL, y: (r.top - OYv()) / SCL, w: r.width / SCL, h: r.height / SCL }; };
+// 飛ぶカード（本物の面を写す）。位置は中心で指定し、回転と拡大は中心まわり
+function flyCard(src) {
+  const e = document.createElement('div'); e.className = 'fc';
+  if (src) { const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; c.getContext('2d').drawImage(src, 0, 0); e.appendChild(c); }
+  $('app').appendChild(e); return e;
+}
+const pose = (cx, cy, rot = 0, sc = 1, ry = 0) => `translate(${(cx - 69).toFixed(1)}px,${(cy - 109.4).toFixed(1)}px) perspective(900px) rotateY(${ry.toFixed(1)}deg) rotate(${rot.toFixed(1)}deg) scale(${sc.toFixed(3)})`;
+const RACKX = 759 + 24.5 + 69;            // 棚のカードの中心（横）
+// カードを出し入れする側: ケースの右と左のうち、並べる場所が足りる側。引き出したケースはその側へ少し開く（表紙を開くように）
+function outSide(C, s0, M) {
+  const half = 69 * s0, roomR = 912 - (C.x + C.w), roomL = C.x - 12, dir = roomR >= half * 2 + 40 || roomR >= roomL ? 1 : -1;
+  const edgeX = dir > 0 ? C.x + C.w : C.x, ex0 = edgeX + dir * (8 + half);
+  const room = dir > 0 ? (912 - half) - ex0 : ex0 - (12 + half), sp = Math.max(22, 54 * s0);
+  const spk = M > 1 ? Math.max(10, Math.min(sp, room / (M - 1))) : 0;
+  return { dir, edgeX, ex0, spk };
+}
+const caseT = (x, y, dir, open, sc) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) perspective(800px) rotateY(${(-dir * open).toFixed(1)}deg) scale(${sc})`;
+function lidStyle(cl, dir, on) { cl.style.transformOrigin = dir > 0 ? '0 50%' : '100% 50%'; cl.style.filter = on ? `drop-shadow(${dir * 12}px 10px 9px rgba(0,0,0,.55))` : ''; }
+async function selectDeck(el) {
+  if (navBusy) return; navBusy = true;
+  const key = el.dataset.key, cases = [...cab.querySelectorAll('.case')], C0 = appXY(el), cx = C0.x + C0.w / 2, cy = C0.y + C0.h / 2;
+  // 1) 引き出す: 本棚から本を抜くように、選んだケースが少し上へ引き出される。ほかは暗くなって左右へ退く
+  sfx('select');
+  const cl = cloneCase(el); cl.classList.add('fly'); cl.style.cssText += `;left:0;top:0;z-index:52;width:${C0.w}px;height:${C0.h}px`; $('app').appendChild(cl); el.style.visibility = 'hidden';
+  const M = Math.min(7, Math.max(1, G.decks.find(d => d.key === key).clips.length)), s0 = Math.min(1.4, C0.h * .88 / 218.8), SD = outSide(C0, s0, M), dir = SD.dir;
+  const PULL = caseT(C0.x, C0.y - 18, dir, 14, 1.035); lidStyle(cl, dir, true);
+  cl.animate([{ transform: caseT(C0.x, C0.y, dir, 0, 1) }, { transform: caseT(C0.x, C0.y + 3, dir, 0, .99), offset: .25 }, { transform: PULL }], { duration: 340, easing: 'cubic-bezier(.3,.7,.3,1.2)', fill: 'forwards' });
+  cl.querySelector('.win').animate([{ filter: 'brightness(1)' }, { filter: 'brightness(2)', offset: .3 }, { filter: 'brightness(1.2)' }], { duration: 420, fill: 'forwards' });
+  cl.querySelector('.tier').animate([{ opacity: 1 }, { opacity: .25 }, { opacity: 1 }, { opacity: .25 }, { opacity: 1 }], { duration: 380 });
+  cases.forEach(c => { if (c === el) return; const r = appXY(c), dd = (r.x + r.w / 2) - cx, dx = Math.sign(dd) * 14; c.animate([{ transform: 'none', filter: 'brightness(1)' }, { transform: `translateX(${dx}px) scale(.97)`, filter: 'brightness(.4)' }], { duration: 360, delay: Math.min(220, Math.abs(dd) / 6), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' }); });
+  if (navigator.vibrate) navigator.vibrate(8);
+  await loadDeck(key); document.querySelectorAll('#cards .card').forEach(c => c.classList.add('pending'));
+  // 2) 滑り出す: カードは立ったまま、ケースの右の口から1枚ずつ横へ。大きさはケースの内側の幅に収まる大きさ
+  const srcs = await Promise.all([...Array(M)].map((_, k) => face(cur + k)));
+  const sy0 = C0.y - 18 + C0.h * .5, sx0 = cx, { edgeX, ex0, spk } = SD;
+  const line = srcs.map(src => flyCard(src));
+  line.forEach((f, k) => {
+    const ex = ex0 + dir * (M - 1 - k) * spk, ey = sy0 + k * 1.5, ea = dir * ((M - 1 - k) * 1.4 - 2);   // 1枚目が一番遠くまで出る
+    f.style.zIndex = 46 + (M - k); f.dataset.x = ex; f.dataset.y = ey; f.dataset.a = ea;
+    f.animate([{ transform: pose(sx0, sy0, 0, s0, 88 * dir) }, { transform: pose(edgeX + 4 * dir, sy0, 0, s0, 70 * dir), offset: .35 }, { transform: pose(ex + 6 * dir, ey, ea, s0, -4 * dir), offset: .8 }, { transform: pose(ex, ey, ea, s0, 0) }], { duration: 420, delay: k * 65, easing: 'cubic-bezier(.3,.6,.2,1)', fill: 'both' });
+    sfx('deal', { at: k * 60, gain: .7, rate: 1 + k * .02 });
+  });
+  await wait(M * 65 + 360);
+  // 3) 流し込む: 保管棚が左へ流れ、読み取り機とモニターが右から入る。カードは近づくにつれて棚の大きさになり、1枚ずつ自分の位置へ
+  $('world').animate([{ transform: 'translateX(420px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'backwards' });
+  $('screen').style.opacity = 0;
+  const pan = cab.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(-380px)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' });
+  cl.animate([{ transform: PULL, opacity: 1 }, { transform: caseT(C0.x - 380, C0.y - 18, dir, 14, 1.035), opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' });
+  line.forEach((f, k) => {
+    const fx = +f.dataset.x, fy = +f.dataset.y, fa = +f.dataset.a, i = cur + k;
+    const ty = k === 0 ? RACK_Y - 30 + 109.4 : RACK_Y + (k - 1) * PITCH + 109.4;      // 1枚目はトレイの口へ（このあと差し込み口から顔を出す）
+    const mx = (fx + RACKX) / 2 + 30, my = Math.max(110, Math.min(fy, ty) - 46 - k * 5);
+    const an = f.animate([{ transform: pose(fx, fy, fa, s0) }, { transform: pose(mx, my, fa * .4 + 4, (s0 + 1) / 2), offset: .5 }, { transform: pose(RACKX, ty, 0, 1) }], { duration: 500, delay: 60 + k * 45, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'both' });
+    an.finished.then(() => { sfx('deal', { gain: .5, rate: .92 }); if (k > 0) { const e = els.get(i); if (e) e.classList.remove('pending'); } f.remove(); });
+  });
+  await pan.finished;
+  cab.style.display = 'none'; cab.getAnimations().forEach(x => x.cancel()); cases.forEach(c => { c.getAnimations().forEach(x => x.cancel()); c.style.zIndex = ''; c.querySelector('.win').getAnimations().forEach(x => x.cancel()); }); cl.remove(); el.style.visibility = '';
+  setTimeout(() => document.querySelectorAll('#cards .card').forEach(c => { if (c !== els.get(cur)) c.classList.remove('pending'); }), 700);
+  $('reader').animate([{ transform: 'translateY(0)' }, { transform: 'translateY(2px)', offset: .3 }, { transform: 'translateY(0)' }], { duration: 140 }); sfx('case_in');
+  // 4) 電源: 読み取りの画面と針、最初のカードが差し込み口から顔を出し、モニターが横線から開く
+  { const dp = $('plate').querySelector('.disp'), kids = [...dp.querySelectorAll('.pic, .dn, .dpos')], real = dp.querySelector('.dpos').innerHTML; kids.forEach(k => k.style.opacity = 0); dp.querySelector('.dpos').innerHTML = 'READ…'; dp.querySelector('.dpos').style.opacity = 1;
+    dp.querySelector('.dpos').animate([{ opacity: 1 }, { opacity: .25 }, { opacity: 1 }], { duration: 180, iterations: 2 });
+    setTimeout(() => { dp.querySelector('.dpos').innerHTML = real; kids.forEach((k, j) => { k.style.opacity = ''; k.animate([{ opacity: 0, transform: 'translateY(3px)' }, { opacity: 1, transform: 'none' }], { duration: 180, delay: j * 70, fill: 'backwards' }); }); }, 380); }
+  const nd = $('scale').querySelector('.needle'), to = nd.style.transform; nd.animate([{ transform: 'translateY(22px)' }, { transform: 'translateY(400px)', offset: .45 }, { transform: to, offset: .85 }, { transform: to }], { duration: 640, easing: 'cubic-bezier(.3,0,.2,1)' });
+  const top = els.get(cur); if (top) { top.classList.remove('pending'); top.animate([{ transform: top.style.transform + ' translateY(196px)' }, { transform: top.style.transform + ' translateY(-10px)', offset: .7 }, { transform: top.style.transform }], { duration: 300, delay: 160, easing: 'cubic-bezier(.2,.9,.3,1)', fill: 'backwards' }); sfx('pop', { at: 160 }); }
+  await wait(120);
+  $('screen').style.opacity = ''; sfx('power_on');
+  $('screen').animate([{ transform: 'scale(.6,.004)', filter: 'brightness(4)' }, { transform: 'scale(1,.004)', filter: 'brightness(4)', offset: .3 }, { transform: 'scale(1,1)', filter: 'brightness(1.4)', offset: .7 }, { transform: 'scale(1,1)', filter: 'brightness(1)' }], { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  $('mask').animate([{ opacity: .7 }, { opacity: .7, offset: .5 }, { opacity: 0 }], { duration: 700 });
+  await wait(260); seat(cur); load(cur); navBusy = false;
+}
+// 複製したケースに、窓の絵（canvas）も描き写す
+function cloneCase(el) { const c = el.cloneNode(true); const a = el.querySelectorAll('canvas'), b = c.querySelectorAll('canvas'); a.forEach((cv, k) => b[k].getContext('2d').drawImage(cv, 0, 0)); return c; }
+// 取り出し: カードが差し込み口に引っ込み、モニターが消え、棚のカードが束になって、ケースへ戻る
+async function openCabinet() {
+  if (navBusy) return; navBusy = true;
+  if (YTON) { players.forEach(pl => pl.pauseVideo && pl.pauseVideo()); paused = true; }
+  sfx('eject');
+  // 1) 差さっていたカードが引っ込む
+  const top = els.get(cur); if (top) top.animate([{ transform: top.style.transform }, { transform: top.style.transform + ' translateY(-8px)', offset: .3 }, { transform: top.style.transform + ' translateY(200px)' }], { duration: 260, easing: 'cubic-bezier(.5,0,.8,.2)', fill: 'forwards' });
+  // 2) モニターが消える（横線に縮み、点になって消える）
+  await wait(120); sfx('scan', { rate: .7, gain: .6 });
+  const off = $('screen').animate([{ transform: 'none', filter: 'brightness(1)' }, { transform: 'scale(1,.006)', filter: 'brightness(3.5)', offset: .45 }, { transform: 'scale(.004,.006)', filter: 'brightness(5)', offset: .8 }, { transform: 'scale(0,0)', filter: 'brightness(5)' }], { duration: 420, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'forwards' });
+  // 3) 棚のカードが、棚の位置のまま持ち上がって一列になる（並びの手前の数枚だけ）
+  const rack = [...els.entries()].filter(([i]) => i > cur).sort((x, y) => y[0] - x[0]);
+  const M = Math.min(5, N), srcs = await Promise.all([...Array(M)].map((_, k) => face(Math.min(N - 1, cur + k))));
+  const ry = k => (k === 0 ? 16 + 109.4 : RACK_Y + (k - 1) * PITCH + 109.4);
+  const back = srcs.map((src, k) => { const f = flyCard(src); f.style.zIndex = 46 + (M - k); return f; });
+  rack.forEach(([, e]) => e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, delay: 120, fill: 'forwards' }));
+  back.forEach((f, k) => f.animate([{ transform: pose(RACKX, ry(k), 0, 1), opacity: k === 0 ? 0 : 1 }, { transform: pose(RACKX - 6 * k, ry(k) - 8, -1.5 * k, .98), opacity: 1 }], { duration: 220, delay: 120 + k * 30, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' }));
+  await wait(250);   // 画面が横線になったところで戻り始める（消えきるのは戻りながら）
+  // 4) カメラが左へ戻る。引き出されたケースの右の口へ、カードが1枚ずつ滑り込み、ケースが棚へ押し戻される
+  const cases = [...cab.querySelectorAll('.case')], sel = cab.querySelector(`.case[data-key="${D.key}"]`);
+  cab.style.display = ''; cab.getAnimations().forEach(x => x.cancel());
+  cases.forEach(c => { c.getAnimations().forEach(x => x.cancel()); });
+  const T = sel ? appXY(sel) : { x: 400, y: 54, w: 116, h: 340 }, tx = T.x + T.w / 2;
+  const s0 = Math.min(1.4, T.h * .88 / 218.8), sy0 = T.y - 18 + T.h * .5, { dir, edgeX, ex0, spk } = outSide(T, s0, M);
+  let cl = null; const PULL = caseT(T.x, T.y - 18, dir, 14, 1.035);
+  if (sel) { cl = cloneCase(sel); cl.classList.add('fly'); cl.style.cssText += `;left:0;top:0;z-index:52;width:${T.w}px;height:${T.h}px`; $('app').appendChild(cl); sel.style.visibility = 'hidden'; lidStyle(cl, dir, true);
+    cl.animate([{ transform: caseT(T.x - 380, T.y - 18, dir, 14, 1.035), opacity: 0 }, { transform: PULL, opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' }); }
+  cab.animate([{ transform: 'translateX(-380px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'backwards' });
+  const wpan = $('world').animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(420px)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.65,0,.25,1)', fill: 'forwards' });
+  cases.forEach(c => { if (c === sel) return; const r = appXY(c); c.animate([{ filter: 'brightness(.4)', transform: 'scale(.97)' }, { filter: 'brightness(1)', transform: 'none' }], { duration: 420, delay: 640 + M * 70 + Math.min(300, Math.abs((r.x + r.w / 2) - tx) / 4), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }); });
+  back.forEach((f, k) => {
+    const lx = ex0 + dir * (M - 1 - k) * spk, ly = sy0 + k * 1.5, la = dir * ((M - 1 - k) * 1.4 - 2);
+    const mx = (RACKX + lx) / 2, my = Math.max(110, Math.min(ry(k), ly) - 46);
+    // 一列の位置まで流れてくる（パンと同じ長さ）→ 近い方から順に、ケースの口へ滑り込む
+    f.animate([{ transform: pose(RACKX - 6 * k, ry(k) - 8, -1.5 * k, .98) }, { transform: pose(mx, my, la * .4, (s0 + 1) / 2), offset: .5 }, { transform: pose(lx, ly, la, s0) }], { duration: 560, delay: k * 30, easing: 'cubic-bezier(.45,0,.2,1)', fill: 'both' })
+      .finished.then(() => f.animate([{ transform: pose(lx, ly, la, s0, 0) }, { transform: pose(lx + 6 * dir, ly, la, s0, -4 * dir), offset: .15 }, { transform: pose(edgeX + 4 * dir, sy0, 0, s0, 70 * dir), offset: .65 }, { transform: pose(tx, sy0, 0, s0, 88 * dir) }], { duration: 360, delay: (M - 1 - k) * 70, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both' }).finished)
+      .then(() => { f.remove(); sfx('deal', { gain: .45, rate: .9 }); });
+  });
+  const inEnd = 560 + 30 * (M - 1) + (M - 1) * 70 + 360;
+  if (cl) { setTimeout(() => { lidStyle(cl, dir, false); cl.animate([{ transform: PULL }, { transform: caseT(T.x, T.y + 3, dir, 0, .99), offset: .7 }, { transform: caseT(T.x, T.y, dir, 0, 1) }], { duration: 300, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+      cl.querySelector('.tier').animate([{ filter: 'brightness(1)' }, { filter: 'brightness(2.4)' }, { filter: 'brightness(1)' }], { duration: 420, delay: 200 }); sfx('case_out', { at: 200 }); }, inEnd);
+    setTimeout(() => { sel.style.visibility = ''; cl.remove(); }, inEnd + 320); }
+  await Promise.all([wpan.finished, wait(inEnd + 340)]);
+  $('world').getAnimations().forEach(x => x.cancel()); $('world').style.opacity = 0; off.cancel(); for (const [, e] of els) e.getAnimations().forEach(x => x.cancel());
+  setTimeout(() => { $('world').style.opacity = ''; }, 50); navBusy = false;
+}
+addEventListener('pointerdown', e => { const ej = e.target.closest('#plate .eject, #plate .disp'); if (ej) { e.stopImmediatePropagation(); const b = $('plate').querySelector('.eject'); b.classList.add('press'); setTimeout(() => b.classList.remove('press'), 140); if (navigator.vibrate) navigator.vibrate(10); openCabinet(); } }, true);
+
+
+if (q.get('game') === 'deadlock' || q.get('game') === 'other') { GAME = q.get('game'); G = GOF(GAME); drawGames(); buildShelf(); }
+if (q.get('deck')) { await loadDeck(q.get('deck')); cab.style.display = 'none'; } else { await loadDeck(G.decks[0].key); }
+if (q.has('p')) { mode = 'swipe'; p = +q.get('p'); place(); }
+window.__ready = true;
+</script>
+</body>
+</html>
