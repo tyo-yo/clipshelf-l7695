@@ -246,7 +246,7 @@ function goFull() { const el = document.documentElement; if (document.fullscreen
 if (!navigator.webdriver && matchMedia('(pointer: coarse)').matches) addEventListener('click', goFull, true);
 document.addEventListener('fullscreenchange', () => setTimeout(fitNow, 250));
 </script>
-<script type="importmap">{ "imports": { "three": "vendor/three/three.module.min.js", "three/addons/": "vendor/three/" } }</script>
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/" } }</script>
 </head>
 <body>
 <div id="turn">横向きにしてください</div>
