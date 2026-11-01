@@ -889,6 +889,7 @@ addEventListener('pointerdown', e => { const ej = e.target.closest('#plate .ejec
 if (q.get('game') === 'deadlock' || q.get('game') === 'other') { GAME = q.get('game'); G = GOF(GAME); drawGames(); buildShelf(); }
 if (q.get('deck')) { await loadDeck(q.get('deck')); cab.style.display = 'none'; } else { await loadDeck(G.decks[0].key); }
 if (q.has('p')) { mode = 'swipe'; p = +q.get('p'); place(); }
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
 window.__ready = true;
 </script>
 </body>
