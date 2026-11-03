@@ -1,0 +1,95 @@
+{
+ "Alter": {
+  "name": "Alter"
+ },
+ "Ash": {
+  "name": "Ash"
+ },
+ "Axle": {
+  "name": "Axle"
+ },
+ "Ballistic": {
+  "name": "Ballistic"
+ },
+ "Bangalore": {
+  "name": "Bangalore"
+ },
+ "Bloodhound": {
+  "name": "Bloodhound"
+ },
+ "Catalyst": {
+  "name": "Catalyst"
+ },
+ "Caustic": {
+  "name": "Caustic"
+ },
+ "Conduit": {
+  "name": "Conduit"
+ },
+ "Crypto": {
+  "name": "Crypto"
+ },
+ "Fade": {
+  "name": "Fade"
+ },
+ "Fuse": {
+  "name": "Fuse"
+ },
+ "Gibraltar": {
+  "name": "Gibraltar"
+ },
+ "Horizon": {
+  "name": "Horizon"
+ },
+ "Leigh": {
+  "name": "Leigh"
+ },
+ "Lifeline": {
+  "name": "Lifeline"
+ },
+ "Loba": {
+  "name": "Loba"
+ },
+ "Mad_Maggie": {
+  "name": "Mad Maggie"
+ },
+ "Mirage": {
+  "name": "Mirage"
+ },
+ "Newcastle": {
+  "name": "Newcastle"
+ },
+ "Octane": {
+  "name": "Octane"
+ },
+ "Pathfinder": {
+  "name": "Pathfinder"
+ },
+ "Rampart": {
+  "name": "Rampart"
+ },
+ "Revenant": {
+  "name": "Revenant"
+ },
+ "Rhapsody": {
+  "name": "Rhapsody"
+ },
+ "Seer": {
+  "name": "Seer"
+ },
+ "Sparrow": {
+  "name": "Sparrow"
+ },
+ "Valkyrie": {
+  "name": "Valkyrie"
+ },
+ "Vantage": {
+  "name": "Vantage"
+ },
+ "Wattson": {
+  "name": "Wattson"
+ },
+ "Wraith": {
+  "name": "Wraith"
+ }
+}

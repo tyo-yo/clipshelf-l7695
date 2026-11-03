@@ -17,3 +17,28 @@ Venator.png | https://cdn.deadlock.wiki/Venator_card.png (page: https://deadlock
 Vindicta.png | https://cdn.deadlock.wiki/Vindicta_card.png (page: https://deadlock.wiki/File:Vindicta_card.png)
 Violet.png | https://cdn.deadlock.wiki/Violet_card.png (page: https://deadlock.wiki/File:Violet_card.png)
 Wraith.png | https://cdn.deadlock.wiki/Wraith_card.png (page: https://deadlock.wiki/File:Wraith_card.png)
+Abrams.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/bull_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/6) | 2026-11-03
+McGinnis.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/engineer_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/8) | 2026-11-03
+Dynamo.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/sumo_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/11) | 2026-11-03
+Kelvin.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/kelvin_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/12) | 2026-11-03
+Holliday.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/astro_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/14) | 2026-11-03
+Bebop.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/bebop_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/15) | 2026-11-03
+Calico.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/nano_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/16) | 2026-11-03
+Grey_Talon.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/archer_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/17) | 2026-11-03
+Mo_Krill.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/digger_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/18) | 2026-11-03
+Shiv.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/shiv_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/19) | 2026-11-03
+Warden.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/warden_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/25) | 2026-11-03
+Yamato.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/yamato_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/27) | 2026-11-03
+Lash.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/lash_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/31) | 2026-11-03
+Viscous.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/viscous_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/35) | 2026-11-03
+Mirage.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/mirage_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/52) | 2026-11-03
+Vyper.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/kali_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/58) | 2026-11-03
+Sinclair.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/magician_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/60) | 2026-11-03
+Drifter.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/drifter_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/64) | 2026-11-03
+Victor.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/frank_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/66) | 2026-11-03
+Graves.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/necro_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/76) | 2026-11-03
+Rem.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/familiar_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/79) | 2026-11-03
+Silver.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/werewolf_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/80) | 2026-11-03
+Celeste.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/unicorn_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/81) | 2026-11-03
+Rat_King.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/ratking_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/84) | 2026-11-03
+Nurse_Harrow.png | https://assets-bucket.deadlock-api.com/assets-api-res/images/heroes/nurse_card.png (page: https://api.deadlock-api.com/v1/assets/heroes/87) | 2026-11-03
